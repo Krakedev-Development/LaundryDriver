@@ -1,0 +1,73 @@
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+dist-android/
+dist-mvp-check/
+web-build/
+expo-env.d.ts
+
+# Native signing artifacts
+*.orig.*
+*.jks
+*.keystore
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files and credentials
+.env
+.env.*
+!.env.example
+google-services.json
+GoogleService-Info.plist
+credentials.json
+
+# typescript
+*.tsbuildinfo
+
+# generated native folders (Expo prebuild)
+/ios/
+/android/
+
+# Android Studio and Gradle artifacts
+/.kotlin/
+/gradle/
+/.gradle/
+/build/
+/build.gradle.kts
+/settings.gradle.kts
+/gradle.properties
+/gradlew
+/gradlew.bat
+/local.properties
+
+# Editors, logs, exports and test artifacts
+.idea/
+.vscode/
+*.log
+*.apk
+*.aab
+coverage/
+playwright-report/
+test-results/
+.cache/
+.eas/
+tmp/

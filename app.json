@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "Laundry Driver",
+    "slug": "LaundryDriver",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/app-icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "laundrydriver",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.laundrycleanfresh.driver"
+    },
+    "android": {
+      "package": "com.laundrycleanfresh.driver",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon-laundry.png",
+        "backgroundColor": "#143F73"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/icono-App.png"
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/logo-laundry-lav.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#FFFFFF"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Laundry Driver necesita acceso a las fotos que elijas como evidencias del servicio.",
+          "cameraPermission": "Laundry Driver necesita la cámara para capturar evidencias del servicio.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Laundry necesita la cámara para leer los códigos de transferencia.",
+          "recordAudioAndroid": false
+        }
+      ],
+      "expo-font"
+    ]
+  }
+}
