@@ -59,6 +59,7 @@ export const loginStyles = StyleSheet.create({
   registerText: { fontSize: 14, lineHeight: 20, fontWeight: "700", color: "#052B50" },
   divider: { height: 1, backgroundColor: "#E1E7F2", marginTop: 4, marginBottom: 14 },
   registration: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 4 },
+  accountNotice: { fontSize: 14, lineHeight: 20, color: "#052B50", textAlign: "center", paddingHorizontal: 8, marginTop: 4, marginBottom: 12 },
   registrationPrompt: { fontSize: 14, color: "#052B50" },
   footer: { gap: 6, alignItems: "center", marginTop: 12 },
   footerRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 },

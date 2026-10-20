@@ -1,5 +1,5 @@
 import { LoginAccessOptions } from "./LoginAccessOptions";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Text, View } from "react-native";
 import { Page } from "../../../components/Page";
 import { Body, Button, Card, Field, useAction } from "../../../components/ui";
@@ -11,12 +11,14 @@ export function LoginForm({
   onLogin,
   onDemo,
   onRegister,
+  notice,
 }: {
   initialEmail: string;
   demoLabel: string;
   onLogin(email: string, hash: string): void;
   onDemo(): void;
   onRegister?: () => void;
+  notice?: ReactNode;
 }) {
   const a = useAction();
   const [email, setEmail] = useState(initialEmail),
@@ -79,6 +81,7 @@ export function LoginForm({
             }}
           />
           <View style={loginStyles.divider} />
+          {notice}
         </Card>
         <LoginAccessOptions
           demoLabel={demoLabel}
