@@ -46,7 +46,7 @@ LaundryApp mantiene su identificador de aplicación y la clave `laundry.native-m
 
 ## Login compartido
 
-Ambos repositorios contienen `packages/mobile-auth` como dependencia npm local, con el mismo contrato `authenticateSession`. La audiencia es explícita en cada repositorio. El formulario, la presentación y el hash de contraseña son equivalentes; cada adaptador ofrece únicamente su acceso demo y LaundryApp añade el registro.
+Ambos repositorios contienen `packages/mobile-auth` como paquete local del workspace pnpm, con el mismo contrato `authenticateSession`. La audiencia es explícita en cada repositorio. El formulario, la presentación y el hash de contraseña son equivalentes; cada adaptador ofrece únicamente su acceso demo y LaundryApp añade el registro.
 
 `scripts/check-shared-login.cjs` comprueba esos archivos al disponer de ambos checkouts. No se requiere un directorio compartido fuera del repositorio ni acceso al otro proyecto para instalar o ejecutar una app.
 
