@@ -28,12 +28,7 @@ export function LoginAccessOptions({
             onPress={onRegister}
           />
         </View>
-      ) : (
-        <Text style={loginStyles.registrationPrompt}>
-          Tu cuenta de chofer es creada por administración. Contacta a tu
-          administrador si necesitas acceso.
-        </Text>
-      )}
+      ) : null}
       <View style={loginStyles.demo}>
         <Text style={loginStyles.demoTitle}>Acceso rápido demo</Text>
         <View style={loginStyles.demoRow}>

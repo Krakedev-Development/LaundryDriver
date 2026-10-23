@@ -1,4 +1,4 @@
-export type LoginRole = "CLIENT" | "DRIVER";
+export type LoginRole = string;
 export interface LoginAccount {
   id: string;
   email: string;
