@@ -4,7 +4,7 @@ const path = require("node:path");
 
 const root = path.resolve(__dirname, "../dist");
 if (!fs.existsSync(path.join(root, "index.html"))) {
-  console.error("Ejecuta npm run export:web antes de iniciar la vista previa.");
+  console.error("Ejecuta pnpm export:web antes de iniciar la vista previa.");
   process.exit(1);
 }
 const mime = {
