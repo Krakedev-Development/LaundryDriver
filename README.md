@@ -1,18 +1,18 @@
 # LaundryDriver
 
-App exclusiva para choferes, con React Native 0.86.3, Expo SDK 57, TypeScript y npm. Mantiene las pantallas, el diseño, las reglas y los recorridos de chofer trasladados desde LaundryApp. LaundryApp queda destinada a clientes.
+App exclusiva para choferes, con React Native 0.86.3, Expo SDK 57, TypeScript y pnpm. Mantiene las pantallas, el diseño, las reglas y los recorridos de chofer trasladados desde LaundryApp. LaundryApp queda destinada a clientes.
 
 ## Ejecutar
 
-Requiere Node.js 22.13 o superior y npm.
+Requiere Node.js 22.13 o superior y pnpm.
 
 ```powershell
 cd C:\LaundryCleanFresh\LaundryDriver
-npm.cmd ci
-npm.cmd start
+pnpm install --frozen-lockfile
+pnpm start
 ```
 
-`npm start` abre Expo en el puerto 8082 para poder ejecutar LaundryApp simultáneamente en el 8081. También puedes usar `npx.cmd expo start --port 8082`, `npm.cmd run android`, `npm.cmd run ios` o `npm.cmd run web`. Se conserva el flujo administrado de Expo; no se incluyen proyectos generados de Android Studio o Xcode.
+`pnpm start` abre Expo en el puerto 8082 para poder ejecutar LaundryApp simultáneamente en el 8081. También puedes usar `pnpm exec expo start --port 8082`, `pnpm run android`, `pnpm run ios` o `pnpm run web`. Se conserva el flujo administrado de Expo; no se incluyen proyectos generados de Android Studio o Xcode.
 
 La aplicación tiene identidad propia: `com.laundrycleanfresh.driver` y esquema `laundrydriver`. Conserva los logos oficiales. Para mapas en una compilación Android propia, configura `GOOGLE_MAPS_ANDROID_API_KEY` siguiendo `.env.example`; no se copian credenciales de LaundryApp.
 
@@ -22,7 +22,7 @@ La cuenta demo de chofer es `carlos.mendoza@laundryfresh.com`, contraseña `1234
 
 El MVP utiliza una cuenta preconfigurada que representa esa provisión administrativa. La creación realizada en LaundryWeb todavía no se sincroniza con esta app: no se agregó backend ni transporte entre aplicaciones.
 
-El login utiliza el contrato local `@laundry/mobile-auth`, en `packages/mobile-auth`, y la misma presentación que LaundryApp. Cada repositorio incluye su copia versionada para instalarse de manera independiente. La autenticación recibe explícitamente el rol permitido y rechaza credenciales del otro rol. `npm.cmd run check:shared-login` verifica la igualdad cuando ambos repositorios están presentes.
+El login utiliza el contrato local `@laundry/mobile-auth`, en `packages/mobile-auth`, y la misma presentación que LaundryApp. Cada repositorio incluye su copia versionada para instalarse de manera independiente. La autenticación recibe explícitamente el rol permitido y rechaza credenciales del otro rol. `pnpm run check:shared-login` verifica la igualdad cuando ambos repositorios están presentes.
 
 ## Recorridos conservados
 
@@ -43,12 +43,12 @@ La [matriz de separación](docs/ROLE_SPLIT.md) detalla el destino de cada pantal
 ## Verificar
 
 ```powershell
-npm.cmd run typecheck
-npm.cmd test
-npm.cmd run check:shared-login
-npm.cmd run export:android
-npm.cmd run export:web
-npm.cmd run test:ui
+pnpm run typecheck
+pnpm test
+pnpm run check:shared-login
+pnpm run export:android
+pnpm run export:web
+pnpm run test:ui
 ```
 
 Las pruebas de interfaz utilizan el export web y Microsoft Edge. El servidor de previsualización usa `http://127.0.0.1:8098`. Los artefactos, dependencias, cachés, credenciales y proyectos nativos generados quedan excluidos por `.gitignore`.
