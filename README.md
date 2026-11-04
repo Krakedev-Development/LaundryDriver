@@ -40,6 +40,14 @@ Los datos operativos se guardan localmente con la clave `laundry.driver-mvp.v1`,
 
 La [matriz de separación](docs/ROLE_SPLIT.md) detalla el destino de cada pantalla y los límites del MVP.
 
+## Documentación funcional
+
+- [Flujos de LaundryDriver](docs/FLUJOS-DRIVER-DEMO.md): pantallas, recorridos implementados y límites del MVP.
+- [Diagramas de flujos](docs/DIAGRAMAS-FLUJOS-DRIVER.md): navegación, recogida, custodia, planta y entrega.
+- [Revisión de lógica de negocio](docs/REVISION-LOGICA-NEGOCIO.md): reglas existentes, hallazgos y decisiones pendientes.
+- [Propuesta de organización de módulos](docs/PROPUESTA-ORGANIZACION-MODULOS.md): estructura actual y evolución sugerida.
+- [Separación por rol](docs/ROLE_SPLIT.md): responsabilidades entre LaundryApp y LaundryDriver.
+
 ## Verificar
 
 ```powershell
