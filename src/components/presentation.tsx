@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import {
   Body,
@@ -11,6 +11,7 @@ import {
 } from "./ui";
 import { MotionSection } from "../design-system/MotionProvider";
 import { contentTheme as theme } from "../design-system/classic";
+import { tactile } from "../design-system/interaction";
 import { statusLabels, type OrderStatus, type Order } from "../domain/models";
 export function Accordion({
   title,
@@ -33,7 +34,10 @@ export function Accordion({
         accessibilityLabel={title}
         accessibilityState={{ expanded: open }}
         aria-expanded={open}
-        onPress={() => setOpen(!open)}
+        onPress={() => {
+          tactile("selection");
+          setOpen(!open);
+        }}
         style={[
           ui.row,
           { minHeight: 48, flexWrap: "nowrap" },
@@ -141,7 +145,10 @@ export function ListItem({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={title}
-      onPress={onPress}
+      onPress={() => {
+        tactile("selection");
+        onPress();
+      }}
       style={({ pressed }) => [
         ui.row,
         {
@@ -149,6 +156,7 @@ export function ListItem({
           flexWrap: "nowrap",
           paddingVertical: 8,
           opacity: pressed ? 0.8 : 1,
+          transform: [{ scale: pressed ? 0.99 : 1 }],
         },
         appearance === "metric" && {
           flex: 1,
@@ -211,8 +219,11 @@ export function SegmentedControl<T extends string>({
           accessibilityLabel={o.label}
           accessibilityState={{ checked: value === o.value }}
           aria-checked={value === o.value}
-          onPress={() => onChange(o.value)}
-          style={[
+          onPress={() => {
+            tactile("selection");
+            onChange(o.value);
+          }}
+          style={({ pressed }) => [
             {
               flex: 1,
               minHeight: 48,
@@ -230,6 +241,7 @@ export function SegmentedControl<T extends string>({
                   : value === o.value
                     ? colors.surface
                     : colors.transparent,
+              transform: [{ scale: pressed ? 0.97 : 1 }],
             },
             appearance === "classic" && {
               borderRadius: 8,

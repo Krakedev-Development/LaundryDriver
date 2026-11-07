@@ -37,7 +37,7 @@ export function BootstrapState({
           <View style={{ width: "80%", maxWidth: 400 }}>
             <Skeleton lines={4} />
           </View>
-          <Text style={ui.muted}>Cargando Laundry…</Text>
+          <Text style={ui.muted}>Cargando Laundry...</Text>
         </>
       )}
     </View>
