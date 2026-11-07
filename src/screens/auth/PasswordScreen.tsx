@@ -5,8 +5,12 @@ import {
   PasswordHint,
   passwordStyles,
 } from "../../components/PasswordPresentation";
-import { useApp } from "../../store/AppProvider";
+import {
+  authService,
+  getStoredAuthSession,
+} from "../../services/auth/authService";
 import { passwordHash } from "../../services/passwordHash";
+import { useApp } from "../../store/AppProvider";
 
 export function PasswordScreen({ forced = false }: { forced?: boolean }) {
   const { execute } = useApp();
@@ -32,11 +36,22 @@ export function PasswordScreen({ forced = false }: { forced?: boolean }) {
                   );
                 if (password !== confirm)
                   throw Error("Las contraseñas no coinciden.");
-                const [currentHash, hash] = await Promise.all([
+                const [currentHash, hash, storedSession] = await Promise.all([
                   passwordHash(current),
                   passwordHash(password),
+                  getStoredAuthSession(),
                 ]);
-                execute((r) => r.changePassword(currentHash, hash, forced));
+                if (storedSession.accessToken) {
+                  const response = await authService.changePassword({
+                    currentPassword: current,
+                    newPassword: password,
+                  });
+                  execute((r) =>
+                    r.changePassword(currentHash, hash, forced, response.user),
+                  );
+                } else {
+                  execute((r) => r.changePassword(currentHash, hash, forced));
+                }
                 setCurrent("");
                 setPassword("");
                 setConfirm("");
@@ -95,7 +110,10 @@ export function PasswordScreen({ forced = false }: { forced?: boolean }) {
           <Button
             label="Cerrar sesión"
             secondary
-            onPress={() => execute((r) => r.logout())}
+            onPress={() => {
+              void authService.logout();
+              execute((r) => r.logout());
+            }}
           />
         )}
       </Card>

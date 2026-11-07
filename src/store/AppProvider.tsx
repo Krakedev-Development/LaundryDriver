@@ -15,6 +15,10 @@ import {
   refreshSchedule,
   transact,
 } from "../domain/repository";
+import {
+  clearAuthSession,
+  getStoredAuthSession,
+} from "../services/auth/authService";
 import { PersistenceQueue } from "./persistence";
 
 interface Context {
@@ -51,11 +55,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const load = () => {
     setReady(false);
     setError(null);
-    void queue
-      .load()
-      .then((saved) => {
+    void Promise.all([queue.load(), getStoredAuthSession()])
+      .then(([saved, storedSession]) => {
         if (!mounted.current) return;
-        const loaded = saved ?? latest.current;
+        let loaded = saved ?? latest.current;
+        if (storedSession.accessToken && storedSession.user) {
+          if (storedSession.user.role === "DRIVER") {
+            loaded = transact(loaded, (repo) => {
+              repo.authenticateFromApi(storedSession.user!);
+            }).state;
+          } else {
+            void clearAuthSession();
+          }
+        }
         refreshSchedule(loaded);
         save(loaded);
         setReady(true);
@@ -97,6 +109,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         error,
         execute,
         reset: () => {
+          void clearAuthSession();
           save(initializeState());
           setReady(true);
         },

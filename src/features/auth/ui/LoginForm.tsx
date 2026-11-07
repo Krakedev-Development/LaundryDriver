@@ -15,7 +15,7 @@ export function LoginForm({
 }: {
   initialEmail: string;
   demoLabel: string;
-  onLogin(email: string, hash: string): void;
+  onLogin(email: string, hash: string, password: string): void | Promise<void>;
   onDemo(): void;
   onRegister?: () => void;
   notice?: ReactNode;
@@ -76,7 +76,7 @@ export function LoginForm({
             onPress={() => {
               void a.asyncRun(async () => {
                 const hash = await passwordHash(password);
-                onLogin(email, hash);
+                await onLogin(email, hash, password);
               });
             }}
           />
