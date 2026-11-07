@@ -1,15 +1,18 @@
 import { contentColors } from "../design-system/classic";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Body, Button, Card, Icon, Title, ui } from "./ui";
 import { StatusChip } from "./presentation";
 import { OrderMetadata, ordersStyles } from "./OrdersPresentation";
+import { tactile } from "../design-system/interaction";
 import {
   canTrack,
   garmentCount,
   modeLabels,
   money,
+  pickupStatuses,
   type Order,
 } from "../domain/models";
+
 export function OrderCard({
   order,
   onDetail,
@@ -23,6 +26,13 @@ export function OrderCard({
 }) {
   const home = appearance === "home";
   const orders = appearance === "orders";
+  const isPickup = pickupStatuses.includes(order.status);
+  const address = isPickup
+    ? order.pickup.addressFull
+    : order.delivery.addressFull;
+  const slotDate = isPickup ? order.pickup.date : order.delivery.date;
+  const slotTime = isPickup ? order.pickup.timeSlot : order.delivery.timeSlot;
+
   return (
     <Card
       style={[
@@ -34,11 +44,15 @@ export function OrderCard({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={"Ver detalle de " + order.id}
-        onPress={onDetail}
+        onPress={() => {
+          tactile("selection");
+          onDetail();
+        }}
         style={({ pressed }) => ({
           padding: home ? 14 : 16,
           gap: 8,
-          opacity: pressed ? 0.8 : 1,
+          opacity: pressed ? 0.85 : 1,
+          transform: [{ scale: pressed ? 0.99 : 1 }],
         })}
       >
         <View
@@ -48,29 +62,55 @@ export function OrderCard({
               : [ui.row, { justifyContent: "space-between" }]
           }
         >
-          <Title
-            style={orders ? ordersStyles.id : home && homeOrderStyles.title}
-          >
-            {order.id}
-          </Title>
+          <View style={styles.idRow}>
+            <Title
+              style={orders ? ordersStyles.id : home && homeOrderStyles.title}
+            >
+              {order.id}
+            </Title>
+            {orders && (
+              <View
+                style={[
+                  styles.legPill,
+                  isPickup ? styles.legPickup : styles.legDelivery,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.legPillText,
+                    { color: isPickup ? "#92400E" : "#166534" },
+                  ]}
+                >
+                  {isPickup ? "RECOGIDA" : "ENTREGA"}
+                </Text>
+              </View>
+            )}
+          </View>
           <OrderMetadataContainer
             active={orders}
             style={ordersStyles.headerStatus}
           >
             {orders && <StatusChip status={order.status} />}
-            <Icon name="chevron-forward" size={18} />
+            <Icon name="chevron-forward" size={18} color="#64748B" />
           </OrderMetadataContainer>
         </View>
         {!orders && <StatusChip status={order.status} />}
-        <OrderMetadataRow active={orders} icon="location-outline">
+        <OrderMetadataRow active={orders} icon="person-outline">
           <Body
-            muted
+            muted={!orders}
             style={orders ? ordersStyles.mode : home && homeOrderStyles.caption}
           >
-            {modeLabels[order.fulfillmentPlan.mode]}
+            {order.customerName} · {modeLabels[order.fulfillmentPlan.mode]}
           </Body>
         </OrderMetadataRow>
-        <OrderMetadataRow active={orders} icon="water-outline">
+        {orders && (
+          <OrderMetadataRow active={orders} icon="location-outline">
+            <Body muted style={ordersStyles.service}>
+              {address}
+            </Body>
+          </OrderMetadataRow>
+        )}
+        <OrderMetadataRow active={orders} icon="cube-outline">
           <Body
             muted
             style={
@@ -78,7 +118,7 @@ export function OrderCard({
             }
           >
             {order.pricingModel === "PER_WEIGHT"
-              ? "Ropa por peso · $2.20 / lb"
+              ? "Bulto por peso · $2.20 / lb"
               : garmentCount(order) +
                 " prendas · " +
                 (order.items[0]?.serviceType ?? "Lavado y cuidado")}
@@ -91,7 +131,7 @@ export function OrderCard({
               justifyContent: "space-between",
               borderTopWidth: 1,
               borderTopColor: orders
-                ? "#F3F4F6"
+                ? "#F1F5F9"
                 : home
                   ? "#BFDBFE"
                   : contentColors.divider,
@@ -101,14 +141,14 @@ export function OrderCard({
           ]}
         >
           <OrderMetadataContainer active={orders} style={ordersStyles.time}>
-            {orders && <Icon name="time-outline" size={12} color="#9CA3AF" />}
+            {orders && <Icon name="time-outline" size={13} color="#64748B" />}
             <Body
               muted
               style={
                 orders ? ordersStyles.caption : home && homeOrderStyles.caption
               }
             >
-              {order.pickup.date} · {order.pickup.timeSlot}
+              {slotDate} · {slotTime}
             </Body>
           </OrderMetadataContainer>
           <Body
@@ -165,6 +205,34 @@ function OrderMetadataContainer({
 }) {
   return active ? <View style={style}>{children}</View> : <>{children}</>;
 }
+
+const styles = StyleSheet.create({
+  idRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  legPill: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  legPickup: {
+    backgroundColor: "#FEF3C7",
+    borderColor: "#FCD34D",
+  },
+  legDelivery: {
+    backgroundColor: "#DCFCE7",
+    borderColor: "#86EFAC",
+  },
+  legPillText: {
+    fontSize: 9,
+    lineHeight: 12,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+  },
+});
 
 const homeOrderStyles = StyleSheet.create({
   card: {
