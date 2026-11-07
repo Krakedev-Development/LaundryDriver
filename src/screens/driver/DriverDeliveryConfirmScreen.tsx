@@ -1,11 +1,21 @@
+import { StyleSheet, Text, View } from "react-native";
 import { Page } from "../../components/Page";
-import { Badge, Button, Card, Check, Empty } from "../../components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  Check,
+  Empty,
+  Icon,
+} from "../../components/ui";
 import { useApp } from "../../store/AppProvider";
 import { visibleOrders } from "../../domain/repository";
 import type { ScreenProps } from "../../navigation/routes";
+import { driverServiceStyles } from "../../components/DriverServicePresentation";
 import { DeliveryRecipientFields } from "../../features/driver/ui/DeliveryRecipientFields";
 import { DeliveryEvidenceFields } from "../../features/driver/ui/DeliveryEvidenceFields";
 import { useDeliveryConfirmation } from "../../features/driver/model/useDeliveryConfirmation";
+
 export function DriverDeliveryConfirmScreen({
   route,
 }: ScreenProps<"DriverDeliveryConfirm">) {
@@ -26,14 +36,23 @@ export function DriverDeliveryConfirmScreen({
         <>
           <Button
             label="Confirmar entrega"
+            icon="checkmark-done-circle-outline"
+            haptic="medium"
+            style={driverServiceStyles.primary}
             disabled={!form.checked || !form.name.trim()}
             onPress={form.confirm}
           />
         </>
       }
     >
-      <Badge>{order.id}</Badge>
-      <Card>
+      <View style={styles.topHeader}>
+        <Badge>{order.id}</Badge>
+        <View style={styles.stepPill}>
+          <Icon name="checkmark-done-outline" size={14} color="#166534" />
+          <Text style={styles.stepPillText}>ENTREGA VERIFICADA</Text>
+        </View>
+      </View>
+      <Card style={driverServiceStyles.card}>
         <DeliveryRecipientFields
           name={form.name}
           setName={form.setName}
@@ -50,6 +69,10 @@ export function DriverDeliveryConfirmScreen({
         />
         <Check
           label="Confirmo la entrega completa a la persona indicada"
+          style={[
+            driverServiceStyles.check,
+            form.checked && driverServiceStyles.checked,
+          ]}
           checked={form.checked}
           onChange={form.setChecked}
         />
@@ -58,3 +81,30 @@ export function DriverDeliveryConfirmScreen({
     </Page>
   );
 }
+
+const styles = StyleSheet.create({
+  topHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  stepPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "#DCFCE7",
+    borderWidth: 1,
+    borderColor: "#86EFAC",
+  },
+  stepPillText: {
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: "800",
+    color: "#166534",
+    letterSpacing: 0.4,
+  },
+});

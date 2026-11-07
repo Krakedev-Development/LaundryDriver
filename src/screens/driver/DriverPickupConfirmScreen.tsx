@@ -1,5 +1,13 @@
+import { StyleSheet, Text, View } from "react-native";
 import { Page } from "../../components/Page";
-import { Badge, Button, Card, Empty } from "../../components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  Empty,
+  Icon,
+  contentColors,
+} from "../../components/ui";
 import { useApp } from "../../store/AppProvider";
 import { visibleOrders } from "../../domain/repository";
 import type { ScreenProps } from "../../navigation/routes";
@@ -7,6 +15,7 @@ import { driverServiceStyles } from "../../components/DriverServicePresentation"
 import { PickupGarmentFields } from "../../features/driver/ui/PickupGarmentFields";
 import { PickupEvidenceFields } from "../../features/driver/ui/PickupEvidenceFields";
 import { usePickupConfirmation } from "../../features/driver/model/usePickupConfirmation";
+
 export function DriverPickupConfirmScreen({
   route,
 }: ScreenProps<"DriverPickupConfirm">) {
@@ -28,6 +37,7 @@ export function DriverPickupConfirmScreen({
           <Button
             label="Confirmar recogida"
             icon="checkmark-circle-outline"
+            haptic="medium"
             style={driverServiceStyles.primary}
             disabled={
               !form.checked ||
@@ -39,7 +49,13 @@ export function DriverPickupConfirmScreen({
         </>
       }
     >
-      <Badge>{order.id}</Badge>
+      <View style={styles.topHeader}>
+        <Badge>{order.id}</Badge>
+        <View style={styles.stepPill}>
+          <Icon name="cube-outline" size={14} color="#92400E" />
+          <Text style={styles.stepPillText}>CUSTODIA DE RECOGIDA</Text>
+        </View>
+      </View>
       <Card style={driverServiceStyles.card}>
         <PickupGarmentFields
           order={order}
@@ -61,3 +77,30 @@ export function DriverPickupConfirmScreen({
     </Page>
   );
 }
+
+const styles = StyleSheet.create({
+  topHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  stepPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: contentColors.warningSoft,
+    borderWidth: 1,
+    borderColor: "#FCD34D",
+  },
+  stepPillText: {
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: "800",
+    color: "#92400E",
+    letterSpacing: 0.4,
+  },
+});
