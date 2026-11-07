@@ -1,18 +1,32 @@
 import { Platform } from "react-native";
 import * as Haptics from "expo-haptics";
 
-export function tactile(kind: "selection" | "success" | "warning" | "error") {
+export type TactileKind =
+  | "selection"
+  | "light"
+  | "medium"
+  | "success"
+  | "warning"
+  | "error";
+
+export function tactile(kind: TactileKind) {
   if (Platform.OS === "web") return;
-  const promise =
-    kind === "selection"
-      ? Haptics.selectionAsync()
-      : Haptics.notificationAsync(
-          {
-            success: Haptics.NotificationFeedbackType.Success,
-            warning: Haptics.NotificationFeedbackType.Warning,
-            error: Haptics.NotificationFeedbackType.Error,
-          }[kind],
-        );
+  let promise: Promise<void>;
+  if (kind === "selection") {
+    promise = Haptics.selectionAsync();
+  } else if (kind === "light") {
+    promise = Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  } else if (kind === "medium") {
+    promise = Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  } else {
+    promise = Haptics.notificationAsync(
+      {
+        success: Haptics.NotificationFeedbackType.Success,
+        warning: Haptics.NotificationFeedbackType.Warning,
+        error: Haptics.NotificationFeedbackType.Error,
+      }[kind],
+    );
+  }
   void promise.catch(() => {});
 }
 export function friendlyError(error: unknown) {

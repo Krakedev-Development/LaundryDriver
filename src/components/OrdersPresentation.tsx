@@ -12,7 +12,7 @@ export function OrderMetadata({
 }) {
   return (
     <View style={ordersStyles.metadata}>
-      <Icon name={icon} size={13} color="#9CA3AF" />
+      <Icon name={icon} size={14} color="#64748B" />
       <View style={ordersStyles.metadataText}>{children}</View>
     </View>
   );
@@ -22,8 +22,8 @@ export const ordersStyles = StyleSheet.create({
   screenTitle: {
     fontSize: 18,
     lineHeight: 25,
-    fontWeight: "700",
-    color: "#111827",
+    fontWeight: "800",
+    color: "#0F172A",
   },
   filter: {
     borderRadius: 12,
@@ -34,9 +34,12 @@ export const ordersStyles = StyleSheet.create({
   filterText: { fontSize: 13, lineHeight: 19, fontWeight: "600" },
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    shadowColor: "#000000",
-    shadowOpacity: 0.06,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
@@ -53,11 +56,11 @@ export const ordersStyles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 6,
   },
-  id: { fontSize: 13, lineHeight: 19, fontWeight: "700", color: "#6B7280" },
-  metadata: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
+  id: { fontSize: 13, lineHeight: 19, fontWeight: "800", color: "#143F73" },
+  metadata: { flexDirection: "row", alignItems: "flex-start", gap: 7 },
   metadataText: { flex: 1, minWidth: 0 },
-  mode: { fontSize: 16, lineHeight: 22, fontWeight: "700", color: "#111827" },
-  service: { fontSize: 13, lineHeight: 19, color: "#374151" },
+  mode: { fontSize: 15, lineHeight: 21, fontWeight: "700", color: "#0F172A" },
+  service: { fontSize: 13, lineHeight: 19, color: "#334155", fontWeight: "500" },
   footer: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -68,12 +71,18 @@ export const ordersStyles = StyleSheet.create({
   time: {
     flexDirection: "row",
     flexWrap: "nowrap",
-    alignItems: "flex-start",
-    gap: 4,
+    alignItems: "center",
+    gap: 5,
     flexShrink: 1,
   },
-  caption: { fontSize: 12, lineHeight: 18, color: "#6B7280", flexShrink: 1 },
-  amount: { fontSize: 12, lineHeight: 18, fontWeight: "600", color: "#374151" },
-  trackAction: { borderColor: "#E5E7EB", borderRadius: 10, minHeight: 48 },
-  trackText: { fontSize: 13, lineHeight: 19, fontWeight: "600" },
+  caption: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: "#64748B",
+    fontWeight: "600",
+    flexShrink: 1,
+  },
+  amount: { fontSize: 13, lineHeight: 18, fontWeight: "800", color: "#0F172A" },
+  trackAction: { borderColor: "#CBD5E1", borderRadius: 10, minHeight: 48 },
+  trackText: { fontSize: 13, lineHeight: 19, fontWeight: "700" },
 });

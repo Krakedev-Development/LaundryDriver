@@ -1,4 +1,4 @@
-﻿import React, { useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -11,10 +11,14 @@ import {
   type ViewStyle,
   type TextStyle,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { theme as chromeTheme } from "../design-system/tokens";
 import { contentTheme as theme, contentColors } from "../design-system/classic";
-import { tactile, friendlyError } from "../design-system/interaction";
+import {
+  tactile,
+  friendlyError,
+  type TactileKind,
+} from "../design-system/interaction";
 import { useFeedback } from "./overlay/OverlayContext";
 export const colors = chromeTheme.colors;
 export { contentColors };
@@ -89,6 +93,10 @@ export const ui = StyleSheet.create({
   },
 });
 export type IconName = React.ComponentProps<typeof Ionicons>["name"];
+export type FeatherIconName = React.ComponentProps<typeof Feather>["name"];
+export type MaterialIconName = React.ComponentProps<
+  typeof MaterialCommunityIcons
+>["name"];
 export function Icon({
   name,
   size = 22,
@@ -99,6 +107,28 @@ export function Icon({
   color?: string;
 }) {
   return <Ionicons name={name} size={size} color={color} />;
+}
+export function FeatherIcon({
+  name,
+  size = 18,
+  color = colors.primary,
+}: {
+  name: FeatherIconName;
+  size?: number;
+  color?: string;
+}) {
+  return <Feather name={name} size={size} color={color} />;
+}
+export function TacticalIcon({
+  name,
+  size = 20,
+  color = colors.primary,
+}: {
+  name: MaterialIconName;
+  size?: number;
+  color?: string;
+}) {
+  return <MaterialCommunityIcons name={name} size={size} color={color} />;
 }
 export function Card({
   children,
@@ -145,6 +175,7 @@ export function Button({
   busy = false,
   testID,
   variant,
+  haptic = "selection",
   style,
   textStyle,
 }: {
@@ -156,6 +187,7 @@ export function Button({
   busy?: boolean;
   testID?: string;
   variant?: "primary" | "secondary" | "ghost" | "danger";
+  haptic?: TactileKind | null;
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
 }) {
@@ -169,7 +201,7 @@ export function Button({
       accessibilityState={{ disabled: disabled || busy, busy }}
       testID={testID}
       onPress={() => {
-        tactile("selection");
+        if (haptic) tactile(haptic);
         onPress();
       }}
       disabled={disabled || busy}
@@ -190,6 +222,7 @@ export function Button({
               : pressed
                 ? theme.opacity.pressed
                 : 1,
+          transform: [{ scale: pressed && !disabled && !busy ? 0.97 : 1 }],
         },
         style,
       ]}
@@ -220,11 +253,13 @@ export function IconButton({
   icon,
   onPress,
   disabled = false,
+  haptic = "selection",
 }: {
   label: string;
   icon: IconName;
   onPress(): void;
   disabled?: boolean;
+  haptic?: TactileKind | null;
 }) {
   return (
     <Pressable
@@ -233,7 +268,7 @@ export function IconButton({
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={() => {
-        tactile("selection");
+        if (haptic) tactile(haptic);
         onPress();
       }}
       style={({ pressed }) => ({
@@ -247,6 +282,7 @@ export function IconButton({
           : pressed
             ? theme.opacity.pressed
             : 1,
+        transform: [{ scale: pressed && !disabled ? 0.94 : 1 }],
         backgroundColor: pressed ? colors.soft : colors.transparent,
       })}
     >
@@ -298,7 +334,12 @@ export function Field({
   return (
     <View style={{ gap: 6 }}>
       <View
-        style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
+        }}
       >
         <Text
           style={[
@@ -343,7 +384,10 @@ export function Field({
           ]}
         />
         {leadingIcon && (
-          <View pointerEvents="none" style={{ position: "absolute", left: 12, top: 17 }}>
+          <View
+            pointerEvents="none"
+            style={{ position: "absolute", left: 12, top: 17 }}
+          >
             <Icon name={leadingIcon} size={18} color={contentColors.muted} />
           </View>
         )}
@@ -410,6 +454,7 @@ export function Choice({
             : pressed
               ? theme.opacity.pressed
               : 1,
+          transform: [{ scale: pressed && !disabled ? 0.98 : 1 }],
         },
         style,
       ]}
@@ -445,7 +490,14 @@ export function Check({
         tactile("selection");
         onChange(!checked);
       }}
-      style={[ui.row, { minHeight: theme.layout.touch }, style]}
+      style={({ pressed }) => [
+        ui.row,
+        {
+          minHeight: theme.layout.touch,
+          transform: [{ scale: pressed ? 0.99 : 1 }],
+        },
+        style,
+      ]}
     >
       {children ?? (
         <>
