@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Page } from "../../components/Page";
 import { Button, Empty, Icon, Title, contentColors } from "../../components/ui";
@@ -9,10 +10,34 @@ import { useLaundryNavigation } from "../../navigation/useLaundryNavigation";
 import { routeStyles } from "../../components/DriverRoutePresentation";
 import { RouteAvailability } from "../../features/driver/ui/RouteAvailability";
 import { NextServiceCard } from "../../features/driver/ui/NextServiceCard";
+import { driverOrdersService } from "../../services/orders/driverOrdersService";
 
 export function DriverRouteScreen() {
   const navigation = useLaundryNavigation();
-  const { state } = useApp();
+  const { state, execute } = useApp();
+  const [syncing, setSyncing] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    async function fetchAssignedRoute() {
+      try {
+        setSyncing(true);
+        const assigned = await driverOrdersService.getAssignedOrders();
+        if (active && assigned.length > 0) {
+          execute((repo) => repo.syncAssignedOrders(assigned));
+        }
+      } catch {
+        // Fallback for offline or local demo sessions
+      } finally {
+        if (active) setSyncing(false);
+      }
+    }
+    void fetchAssignedRoute();
+    return () => {
+      active = false;
+    };
+  }, [execute]);
+
   const orders = visibleOrders(state).filter(
     (order) =>
       pickupStatuses.includes(order.status) ||
@@ -24,9 +49,29 @@ export function DriverRouteScreen() {
   return (
     <Page>
       <RouteAvailability orders={orders} />
-      <Title style={routeStyles.section}>Siguiente servicio</Title>
+      <View style={styles.sectionHeaderRow}>
+        <Title style={routeStyles.section}>Siguiente servicio</Title>
+        {syncing && (
+          <View style={styles.syncBadge}>
+            <Icon name="sync-outline" size={12} color={contentColors.primary} />
+            <Text style={styles.syncText}>Sincronizando...</Text>
+          </View>
+        )}
+      </View>
       {next ? (
-        <NextServiceCard order={next} />
+        <View style={styles.nextContainer}>
+          <NextServiceCard order={next} />
+          <Button
+            label="Abrir mapa táctico en Guayaquil"
+            icon="map-outline"
+            haptic="medium"
+            style={styles.mapActionBtn}
+            textStyle={styles.mapActionText}
+            onPress={() =>
+              navigation.navigate("DriverMap", { orderId: next.id })
+            }
+          />
+        </View>
       ) : (
         <Empty text="No hay paradas activas asignadas. Consulta los próximos servicios." />
       )}
@@ -88,6 +133,42 @@ export function DriverRouteScreen() {
 }
 
 const styles = StyleSheet.create({
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  syncBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    backgroundColor: contentColors.soft,
+  },
+  syncText: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "700",
+    color: contentColors.primary,
+  },
+  nextContainer: {
+    gap: 12,
+  },
+  mapActionBtn: {
+    backgroundColor: "#0F172A",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 14,
+    paddingVertical: 14,
+  },
+  mapActionText: {
+    color: "#F8FAFC",
+    fontWeight: "700",
+    fontSize: 14,
+  },
   timelineHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -110,12 +191,13 @@ const styles = StyleSheet.create({
     color: contentColors.primary,
   },
   timelineList: {
-    gap: 12,
+    gap: 0,
+    paddingVertical: 4,
   },
   timelineRow: {
     flexDirection: "row",
     alignItems: "stretch",
-    gap: 10,
+    gap: 12,
   },
   timelineRail: {
     width: 28,
@@ -128,30 +210,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
-    marginTop: 14,
+    zIndex: 2,
   },
   nodePickup: {
     backgroundColor: "#FEF3C7",
-    borderColor: "#F59E0B",
+    borderColor: "#D97706",
   },
   nodeDelivery: {
-    backgroundColor: "#ECFCCB",
-    borderColor: "#84CC16",
+    backgroundColor: "#DCFCE7",
+    borderColor: "#16A34A",
   },
   nodeIndex: {
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 14,
     fontWeight: "800",
     color: "#0F172A",
   },
   timelineConnector: {
-    width: 2,
     flex: 1,
-    backgroundColor: "#CBD5E1",
+    width: 2,
+    backgroundColor: "#E2E8F0",
     marginVertical: 4,
   },
   timelineContent: {
     flex: 1,
-    minWidth: 0,
+    paddingBottom: 16,
   },
 });

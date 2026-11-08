@@ -3,6 +3,7 @@ import { Button, type IconName, useAction } from "../../../components/ui";
 import { useApp } from "../../../store/AppProvider";
 import { type Order } from "../../../domain/models";
 import { useLaundryNavigation } from "../../../navigation/useLaundryNavigation";
+import { driverOrdersService } from "../../../services/orders/driverOrdersService";
 
 export function DriverAction({ order }: { order: Order }) {
   const { execute } = useApp();
@@ -61,14 +62,35 @@ export function DriverAction({ order }: { order: Order }) {
           label={action[0]}
           icon={action[2]}
           haptic="medium"
+          busy={feedbackAction.busy}
           onPress={() => {
-            if (
-              feedbackAction.run(() =>
-                execute((r) => r.driverAction(order.id, action[1])),
-              ) &&
-              ["START_PICKUP", "START_DELIVERY"].includes(action[1])
-            )
-              navigation.navigate("DriverMap", { orderId: order.id });
+            void feedbackAction.asyncRun(async () => {
+              if (action[1] === "ARRIVE_FACILITY") {
+                try {
+                  const updated =
+                    await driverOrdersService.confirmFacilityArrival(
+                      order.id,
+                      order.version ?? 1,
+                      "Entrega en planta central confirmada",
+                    );
+                  if (updated?.version) {
+                    execute((r) =>
+                      r.updateOrderVersion(
+                        order.id,
+                        updated.version,
+                        "AT_FACILITY",
+                      ),
+                    );
+                  }
+                } catch {
+                  // Fallback for offline or demo testing
+                }
+              }
+              execute((r) => r.driverAction(order.id, action[1]));
+              if (["START_PICKUP", "START_DELIVERY"].includes(action[1])) {
+                navigation.navigate("DriverMap", { orderId: order.id });
+              }
+            });
           }}
         />
       )}
