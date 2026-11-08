@@ -74,6 +74,7 @@ export interface Order {
   handoffs: Handoff[];
   adjustments: Adjustment[];
   canChangeOutboundMethod: boolean;
+  version?: number;
 }
 export const money = (n: number) => `$${n.toFixed(2)}`;
 export const round = (n: number) =>
