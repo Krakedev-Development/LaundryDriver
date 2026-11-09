@@ -1,7 +1,13 @@
 import { authenticateSession } from "@laundry/mobile-auth";
 import { facilities } from "./catalog";
 import { DEMO_PASSWORD_HASH } from "./seed";
-import { type AppState, type OperationalStatus, type Role } from "./models";
+import {
+  type AppState,
+  type OperationalStatus,
+  type Order,
+  type OrderStatus,
+  type Role,
+} from "./models";
 import { PlantOperations } from "./operations/PlantOperations";
 import { clone, refreshSchedule } from "./state";
 import {
@@ -190,6 +196,45 @@ export class LaundryRepository extends PlantOperations {
     if (this.state.session?.role !== "DRIVER")
       throw Error("Se requiere sesión de chofer.");
     this.state.driver.operationalStatus = status;
+  }
+
+  syncAssignedOrders(apiOrders: Order[]): void {
+    const driverId = this.state.session?.id || this.state.driver.id;
+    const driverName = this.state.driver.name;
+
+    for (const apiOrder of apiOrders) {
+      const existingIndex = this.state.orders.findIndex(
+        (o) => o.id === apiOrder.id,
+      );
+      const syncedOrder: Order = {
+        ...apiOrder,
+        assignedDriverId: driverId,
+        assignedDriverName: driverName,
+      };
+
+      if (existingIndex >= 0) {
+        this.state.orders[existingIndex] = {
+          ...this.state.orders[existingIndex],
+          ...syncedOrder,
+        };
+      } else {
+        this.state.orders.unshift(syncedOrder);
+      }
+    }
+  }
+
+  updateOrderVersion(
+    orderId: string,
+    version: number,
+    status?: OrderStatus,
+  ): void {
+    const order = this.state.orders.find((o) => o.id === orderId);
+    if (order) {
+      order.version = version;
+      if (status) {
+        order.status = status;
+      }
+    }
   }
 
   simulateTemporaryPassword(): void {

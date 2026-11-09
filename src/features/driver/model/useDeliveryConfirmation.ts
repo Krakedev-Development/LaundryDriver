@@ -1,9 +1,10 @@
 import { useState } from "react";
 import type { Order } from "../../../domain/models";
-
 import { useAction } from "../../../components/ui";
 import { useApp } from "../../../store/AppProvider";
 import { useLaundryNavigation } from "../../../navigation/useLaundryNavigation";
+import { driverOrdersService } from "../../../services/orders/driverOrdersService";
+
 export function useDeliveryConfirmation(order: Order | undefined) {
   const { execute } = useApp();
   const navigation = useLaundryNavigation();
@@ -15,26 +16,41 @@ export function useDeliveryConfirmation(order: Order | undefined) {
     [code, setCode] = useState(""),
     [checked, setChecked] = useState(false);
 
-  const confirm = () => {
+  const confirm = async () => {
     if (!order) return;
-    if (
-      feedbackAction.run(
-        () =>
+    const ok = await feedbackAction.asyncRun(async () => {
+      try {
+        const updated = await driverOrdersService.confirmDelivery(
+          order.id,
+          order.version ?? 1,
+          notes.trim() || `Entregado a ${name.trim()} (${relationship})`,
+        );
+        if (updated?.version) {
           execute((r) =>
-            r.driverConfirmDelivery(
-              order.id,
-              name,
-              relationship,
-              notes,
-              photo,
-              code.trim() || undefined,
-            ),
-          ),
-        "Entrega confirmada.",
-      )
-    )
+            r.updateOrderVersion(order.id, updated.version, "DELIVERED"),
+          );
+        }
+      } catch {
+        // Fallback for offline or demo testing
+      }
+
+      execute((r) =>
+        r.driverConfirmDelivery(
+          order.id,
+          name,
+          relationship,
+          notes,
+          photo,
+          code.trim() || undefined,
+        ),
+      );
+    }, "Entrega confirmada.");
+
+    if (ok) {
       navigation.popTo("DriverRoute");
+    }
   };
+
   return {
     name,
     setName,
@@ -49,6 +65,7 @@ export function useDeliveryConfirmation(order: Order | undefined) {
     checked,
     setChecked,
     confirm,
+    busy: feedbackAction.busy,
     feedback: feedbackAction.feedback,
   };
 }

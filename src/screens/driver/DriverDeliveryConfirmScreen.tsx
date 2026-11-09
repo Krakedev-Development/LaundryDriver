@@ -40,7 +40,8 @@ export function DriverDeliveryConfirmScreen({
             haptic="medium"
             style={driverServiceStyles.primary}
             disabled={!form.checked || !form.name.trim()}
-            onPress={form.confirm}
+            busy={form.busy}
+            onPress={() => void form.confirm()}
           />
         </>
       }
