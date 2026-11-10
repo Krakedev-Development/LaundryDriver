@@ -6,6 +6,7 @@ import {
   Platform,
   ScrollView,
   Text,
+  type ScrollViewInstance,
   View,
   type StyleProp,
   type ViewStyle,
@@ -67,7 +68,7 @@ export function Page({
   const navigation = useLaundryNavigation(),
     route = useRoute();
   const name = route.name as keyof Routes;
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
 
   const tabs = driverTabs,
     primary = primaryTabTarget(name);

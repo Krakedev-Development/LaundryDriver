@@ -9,6 +9,7 @@ import {
   Pressable,
   ScrollView,
   Text,
+  type TextInstance,
   View,
   useWindowDimensions,
   findNodeHandle,
@@ -32,7 +33,7 @@ export function OverlayHost({
   const { height } = useWindowDimensions();
   const progress = useRef(new Animated.Value(0)).current;
   const drag = useRef(new Animated.Value(0)).current;
-  const heading = useRef<Text>(null);
+  const heading = useRef<TextInstance>(null);
   const close = useRef(onClose);
   close.current = onClose;
   const reducedRef = useRef(reduced);
