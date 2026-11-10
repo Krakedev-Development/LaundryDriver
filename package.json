@@ -13,7 +13,7 @@
     "web": "expo start --web --port 8082",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
-    "test:ui": "playwright test",
+    "test:ui": "tsx tests/fixtures/exportSeed.ts && playwright test",
     "preview:mvp": "node scripts/preview-export.cjs",
     "export:android": "expo export --platform android --max-workers 2 --output-dir dist-android",
     "export:web": "expo export --platform web --max-workers 2",

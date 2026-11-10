@@ -1,9 +1,6 @@
-const { test, expect } = require("@playwright/test");
+const { test, expect, STATE_KEY } = require("./support/fixtures.cjs");
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
-  await page.evaluate(() => localStorage.clear());
-  await page.reload();
-  await page.getByRole("button", { name: "Chofer demo", exact: true }).click();
   await expect(
     page.getByRole("tab", { name: "Mi ruta", exact: true }),
   ).toBeVisible();
@@ -74,28 +71,17 @@ test("driver pickup, plant, delivery, recipient and history form a complete rout
     .getByRole("button", { name: "Confirmar recogida", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Ir a planta central", exact: true })
+    .getByRole("button", { name: "Confirmar llegada a planta", exact: true })
     .click();
-  await page
-    .getByRole("button", { name: "Confirmar entrega en planta", exact: true })
-    .click();
-  await page.getByRole("tab", { name: "Servicios", exact: true }).click();
-  await page.getByRole("radio", { name: "Próximos", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Ver detalle de SOL-4587", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Herramientas de planta · Demo", exact: true })
-    .click();
-  for (const action of [
-    "Simular ingreso a lavado",
-    "Simular control de calidad",
-    "Simular prendas listas",
-    "Simular asignación de entrega",
-  ])
-    await page
-      .getByRole("button", { name: `${action} · Demo`, exact: true })
-      .click();
+  // La operación de planta no es del chofer: se deja el servicio listo para entrega.
+  await page.evaluate((key) => {
+    const state = JSON.parse(localStorage.getItem(key));
+    const order = state.orders.find((o) => o.id === "SOL-4587");
+    order.status = "DELIVERY_ASSIGNED";
+    order.paymentStatus = "PAGADO";
+    localStorage.setItem(key, JSON.stringify(state));
+  }, STATE_KEY);
+  await page.reload();
   await page
     .getByRole("button", { name: "Iniciar navegación de entrega", exact: true })
     .click();

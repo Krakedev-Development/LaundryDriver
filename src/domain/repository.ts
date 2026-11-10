@@ -1,12 +1,10 @@
 import { authenticateSession } from "@laundry/mobile-auth";
 import { facilities } from "./catalog";
-import { DEMO_PASSWORD_HASH } from "./seed";
 import {
   type AppState,
   type OperationalStatus,
   type Order,
   type OrderStatus,
-  type Role,
 } from "./models";
 import { PlantOperations } from "./operations/PlantOperations";
 import { clone, refreshSchedule } from "./state";
@@ -92,7 +90,7 @@ export class LaundryRepository extends PlantOperations {
         id: user.id,
         email: normalizedEmail,
         role: "DRIVER",
-        passwordHash: passwordHash || DEMO_PASSWORD_HASH,
+        passwordHash,
       });
     }
 
@@ -120,11 +118,6 @@ export class LaundryRepository extends PlantOperations {
     const response = await authService.login({ email, password });
     this.authenticateFromApi(response.user, passwordHash);
     return response;
-  }
-
-  demoLogin(role: Role): void {
-    if (role !== "DRIVER") throw Error(DRIVER_ONLY_ERROR_MESSAGE);
-    this.state.session = { id: this.state.driver.id, role: "DRIVER" };
   }
 
   logout(): void {
@@ -235,13 +228,6 @@ export class LaundryRepository extends PlantOperations {
         order.status = status;
       }
     }
-  }
-
-  simulateTemporaryPassword(): void {
-    this.state.driver.mustChangePassword = true;
-    this.state.accounts.find((a) => a.role === "DRIVER")!.passwordHash =
-      DEMO_PASSWORD_HASH;
-    this.demoLogin("DRIVER");
   }
 }
 

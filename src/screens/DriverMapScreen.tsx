@@ -12,12 +12,13 @@ import {
   contentColors,
   useAction,
 } from "../components/ui";
-import RouteMap, {
+import RouteMap from "../components/RouteMap";
+import {
   GUAYAQUIL_BASE,
   normalizeGuayaquilCoords,
   stopKindMeta,
   type StopKind,
-} from "../components/RouteMap";
+} from "../components/routeMapShared";
 import { useApp } from "../store/AppProvider";
 import { visibleOrders } from "../domain/repository";
 import { pickupStatuses, type Order } from "../domain/models";
@@ -32,12 +33,11 @@ function destinationFor(order: Order): {
   stopKind: StopKind;
 } {
   if (["PICKED_UP", "HEADING_TO_FACILITY"].includes(order.status)) {
-    const f =
-      facilities.find((f) => f.name === order.facilityName) ?? facilities[0];
+    const f = facilities.find((f) => f.name === order.facilityName);
     return {
-      latitude: f.latitude,
-      longitude: f.longitude,
-      addressFull: f.address,
+      latitude: f?.latitude ?? order.fulfillmentPlan.inbound.latitude,
+      longitude: f?.longitude ?? order.fulfillmentPlan.inbound.longitude,
+      addressFull: f?.address ?? order.facilityName,
       stopKind: "FACILITY",
     };
   }

@@ -71,3 +71,6 @@ test-results/
 .cache/
 .eas/
 tmp/
+
+# Estado de prueba generado para Playwright
+tests/fixtures/generated/

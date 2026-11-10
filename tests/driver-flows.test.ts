@@ -5,7 +5,7 @@ import { decodeState } from '../src/store/persistence';
 
 test('pickup, custody, plant, delivery, recipient and evidence survive reload', () => {
   const h = driverHarness();
-  h.run(repo => repo.demoLogin('DRIVER'));
+  h.signIn();
   const order = h.state.orders.find(order => order.id === 'SOL-4587')!;
   const id = order.id, count = h.state.driver.completedDeliveriesCount;
   h.run(repo => repo.driverAction(id, 'ARRIVE_PICKUP'));
@@ -34,7 +34,7 @@ test('pickup, custody, plant, delivery, recipient and evidence survive reload', 
 
 test('pick up finishes at the facility without creating a home delivery', () => {
   const h = driverHarness();
-  h.run(repo => repo.demoLogin('DRIVER'));
+  h.signIn();
   const order = h.state.orders.find(order => order.id === 'SOL-HS-001')!;
   assert.equal(order.fulfillmentPlan.mode, 'HOME_STORE');
   assert.throws(() => h.run(repo => repo.driverAction(order.id, 'START_DELIVERY')), /estado/);
@@ -45,7 +45,7 @@ test('pick up finishes at the facility without creating a home delivery', () => 
 
 test('availability, assignment and payment guards remain mandatory', () => {
   const h = driverHarness();
-  h.run(repo => repo.demoLogin('DRIVER'));
+  h.signIn();
   h.run(repo => repo.setDriverOperationalStatus('BREAK'));
   assert.throws(() => h.run(repo => repo.driverAction('SOL-4587', 'ARRIVE_PICKUP')), /disponible/);
   h.run(repo => repo.setDriverOperationalStatus('AVAILABLE'));

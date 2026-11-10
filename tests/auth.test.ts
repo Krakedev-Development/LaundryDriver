@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { test } from "node:test";
 import { authenticateSession } from "@laundry/mobile-auth";
 import { driverHarness } from "./driver.fixture";
-import { DEMO_PASSWORD_HASH } from "../src/domain/seed";
+import { DEMO_PASSWORD_HASH } from "./fixtures/seedState";
 import { visibleOrders } from "../src/domain/repository";
 import {
   authService,
@@ -35,7 +35,16 @@ test("driver app accepts only provisioned driver credentials and exposes no regi
     h.run((repo) => repo.login("maria.torres@gmail.com", DEMO_PASSWORD_HASH)),
   );
   assert.throws(
-    () => h.run((repo) => repo.demoLogin("CLIENT")),
+    () =>
+      h.run((repo) =>
+        repo.authenticateFromApi({
+          id: "x",
+          email: "cliente@correo.test",
+          name: "Cliente",
+          role: "CLIENT",
+          status: "ACTIVE",
+        } as never),
+      ),
     new RegExp(DRIVER_ONLY_ERROR_MESSAGE),
   );
   h.run((repo) =>
@@ -56,7 +65,10 @@ test("driver app accepts only provisioned driver credentials and exposes no regi
 
 test("temporary password blocks services and its mandatory change persists", () => {
   const h = driverHarness();
-  h.run((repo) => repo.simulateTemporaryPassword());
+  h.run((repo) => {
+    repo.state.driver.mustChangePassword = true;
+  });
+  h.signIn();
   assert.throws(
     () => h.run((repo) => repo.driverAction("SOL-4587", "ARRIVE_PICKUP")),
     /temporal/,
@@ -73,7 +85,7 @@ test("temporary password blocks services and its mandatory change persists", () 
 
 test("driver chat preserves sender identity and storage uses its own namespace", async () => {
   const h = driverHarness();
-  h.run((repo) => repo.demoLogin("DRIVER"));
+  h.signIn();
   h.run((repo) => repo.sendChatMessage("SOL-4587", "Estoy en camino."));
   assert.equal(h.state.chatMessages["SOL-4587"].at(-1)?.senderRole, "DRIVER");
   const values = new Map<string, string>();

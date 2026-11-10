@@ -8,9 +8,11 @@ import {
 } from "../src/services/auth/authService";
 import {
   driverOrdersService,
-  GUAYAQUIL_COORDINATES,
   type BackendOrderDetails,
 } from "../src/services/orders/driverOrdersService";
+
+const KENNEDY_NORTE = { latitude: -2.158, longitude: -79.896 };
+const URDESA = { latitude: -2.17, longitude: -79.912 };
 
 test("driverOrdersService connects route and transitions to the backend API", async () => {
   const originalFetch = globalThis.fetch;
@@ -70,8 +72,8 @@ test("driverOrdersService connects route and transitions to the backend API", as
           kind: "INBOUND",
           method: "DRIVER",
           addressText: "Av. San Jorge y Kennedy Norte, Guayaquil",
-          latitude: GUAYAQUIL_COORDINATES.kennedyNorte.latitude,
-          longitude: GUAYAQUIL_COORDINATES.kennedyNorte.longitude,
+          latitude: KENNEDY_NORTE.latitude,
+          longitude: KENNEDY_NORTE.longitude,
           slot: {
             id: "slot-gye-1",
             date: "2026-11-08T00:00:00.000Z",
@@ -88,8 +90,8 @@ test("driverOrdersService connects route and transitions to the backend API", as
           kind: "OUTBOUND",
           method: "DRIVER",
           addressText: "Víctor Emilio Estrada 410, Urdesa, Guayaquil",
-          latitude: GUAYAQUIL_COORDINATES.urdesa.latitude,
-          longitude: GUAYAQUIL_COORDINATES.urdesa.longitude,
+          latitude: URDESA.latitude,
+          longitude: URDESA.longitude,
           slot: {
             id: "slot-gye-2",
             date: "2026-11-09T00:00:00.000Z",
@@ -192,11 +194,11 @@ test("driverOrdersService connects route and transitions to the backend API", as
     assert.equal(domainOrder.version, 1);
     assert.equal(
       domainOrder.fulfillmentPlan.inbound.latitude,
-      GUAYAQUIL_COORDINATES.kennedyNorte.latitude,
+      KENNEDY_NORTE.latitude,
     );
     assert.equal(
       domainOrder.fulfillmentPlan.inbound.longitude,
-      GUAYAQUIL_COORDINATES.kennedyNorte.longitude,
+      KENNEDY_NORTE.longitude,
     );
 
     // 2. Test getOrder

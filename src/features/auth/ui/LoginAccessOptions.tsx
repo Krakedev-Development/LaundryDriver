@@ -2,15 +2,7 @@ import { Text, View } from "react-native";
 import { Button } from "../../../components/ui";
 import { loginStyles } from "../../../components/LoginPresentation";
 
-export function LoginAccessOptions({
-  demoLabel,
-  onDemo,
-  onRegister,
-}: {
-  demoLabel: string;
-  onDemo(): void;
-  onRegister?: () => void;
-}) {
+export function LoginAccessOptions({ onRegister }: { onRegister?: () => void }) {
   return (
     <>
       {onRegister ? (
@@ -29,17 +21,6 @@ export function LoginAccessOptions({
           />
         </View>
       ) : null}
-      <View style={loginStyles.demo}>
-        <Text style={loginStyles.demoTitle}>Acceso rápido demo</Text>
-        <View style={loginStyles.demoRow}>
-          <Button
-            label={demoLabel}
-            secondary
-            style={loginStyles.demoButton}
-            onPress={onDemo}
-          />
-        </View>
-      </View>
     </>
   );
 }

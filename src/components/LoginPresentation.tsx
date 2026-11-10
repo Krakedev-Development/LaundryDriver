@@ -64,8 +64,4 @@ export const loginStyles = StyleSheet.create({
   footer: { gap: 6, alignItems: "center", marginTop: 12 },
   footerRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 },
   footerText: { fontSize: 11, lineHeight: 16, color: theme.colors.muted, textAlign: "center", flexShrink: 1 },
-  demo: { marginTop: 24, gap: 8 },
-  demoTitle: { fontSize: 12, fontWeight: "600", color: theme.colors.muted, textAlign: "center" },
-  demoRow: { flexDirection: "row", gap: 10 },
-  demoButton: { flex: 1, borderRadius: 12 },
 });

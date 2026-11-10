@@ -27,7 +27,7 @@ export function BootstrapState({
           <Text style={ui.error}>{error}</Text>
           <Button label="Reintentar carga" onPress={retry} />
           <Button
-            label="Restablecer datos locales demo"
+            label="Restablecer datos locales"
             secondary
             onPress={reset}
           />

@@ -1,6 +1,5 @@
 import { Page } from "../../components/Page";
 import { Empty } from "../../components/ui";
-import { DemoPlantActions } from "../DemoPlantActions";
 import { useApp } from "../../store/AppProvider";
 import { visibleOrders } from "../../domain/repository";
 import { pickupStatuses } from "../../domain/models";
@@ -31,7 +30,6 @@ export function DriverServiceDetailScreen({
       <ServiceGarments order={order} />
       <DriverAction order={order} />
       <ServiceReceipts order={order} />
-      <DemoPlantActions order={order} />
     </Page>
   );
 }

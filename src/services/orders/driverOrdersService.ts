@@ -14,12 +14,9 @@ import { facilities } from "../../domain/catalog";
 import { apiClient } from "../api/apiClient";
 import { getStoredAuthSession } from "../auth/authService";
 
+// Centro del mapa cuando el servidor no entrega coordenadas de una parada.
 export const GUAYAQUIL_COORDINATES = {
   center: { latitude: -2.1894, longitude: -79.8891 },
-  kennedyNorte: { latitude: -2.158, longitude: -79.896 },
-  urdesa: { latitude: -2.17, longitude: -79.912 },
-  samborondon: { latitude: -2.143, longitude: -79.865 },
-  plantaCentral: { latitude: -2.161, longitude: -79.898 },
 } as const;
 
 export interface BackendOrderSummary {
@@ -166,27 +163,25 @@ export function mapBackendOrderToDomain(
   const inboundCoords = normalizeCoordinates(
     inboundLeg?.latitude,
     inboundLeg?.longitude,
-    GUAYAQUIL_COORDINATES.kennedyNorte,
+    GUAYAQUIL_COORDINATES.center,
   );
 
   const outboundCoords = normalizeCoordinates(
     outboundLeg?.latitude,
     outboundLeg?.longitude,
-    GUAYAQUIL_COORDINATES.urdesa,
+    GUAYAQUIL_COORDINATES.center,
   );
 
   const inboundDomainLeg: Leg = {
     method: (inboundLeg?.method as Leg["method"]) ?? "DRIVER",
-    addressFull:
-      inboundLeg?.addressText ||
-      "Av. Francisco de Orellana y Plaza Dañín, Kennedy Norte, Guayaquil",
+    addressFull: inboundLeg?.addressText || "Dirección no disponible",
     scheduledDate: inboundLeg?.slot?.date
       ? inboundLeg.slot.date.slice(0, 10)
-      : "Hoy",
+      : "Sin fecha",
     timeSlotId: inboundLeg?.slot?.id,
     timeSlotText: inboundLeg?.slot
       ? `${inboundLeg.slot.startTime} - ${inboundLeg.slot.endTime}`
-      : "10:00 - 12:00",
+      : "Sin horario",
     status: "SCHEDULED",
     latitude: inboundCoords.latitude,
     longitude: inboundCoords.longitude,
@@ -196,16 +191,14 @@ export function mapBackendOrderToDomain(
     method:
       (outboundLeg?.method as Leg["method"]) ??
       (raw.mode === "HOME_STORE" ? "CUSTOMER" : "DRIVER"),
-    addressFull:
-      outboundLeg?.addressText ||
-      "Víctor Emilio Estrada 410 y Ébanos, Urdesa Central, Guayaquil",
+    addressFull: outboundLeg?.addressText || "Dirección no disponible",
     scheduledDate: outboundLeg?.slot?.date
       ? outboundLeg.slot.date.slice(0, 10)
-      : "Mañana",
+      : "Sin fecha",
     timeSlotId: outboundLeg?.slot?.id,
     timeSlotText: outboundLeg?.slot
       ? `${outboundLeg.slot.startTime} - ${outboundLeg.slot.endTime}`
-      : "15:00 - 17:00",
+      : "Sin horario",
     status: "SCHEDULED",
     latitude: outboundCoords.latitude,
     longitude: outboundCoords.longitude,
@@ -252,7 +245,7 @@ export function mapBackendOrderToDomain(
     addressId: outboundDomainLeg.addressId ?? "addr-delivery",
     addressTitle:
       raw.mode === "HOME_STORE"
-        ? "Retiro en sede Guayaquil"
+        ? "Retiro en sede"
         : "Entrega a domicilio",
     addressFull: outboundDomainLeg.addressFull,
     date: outboundDomainLeg.scheduledDate,
@@ -314,14 +307,13 @@ export function mapBackendOrderToDomain(
         ];
 
   const assignedFacility =
-    facilities.find((f) => f.id === raw.facilityId)?.name ||
-    "Sede Central Guayaquil";
+    facilities.find((f) => f.id === raw.facilityId)?.name || "Sede asignada";
 
   return {
     id: raw.id,
-    customerId: ("customerId" in raw && raw.customerId) || "cust-1",
-    customerName: "Cliente Guayaquil",
-    customerPhone: "+593 99 876 5432",
+    customerId: ("customerId" in raw && raw.customerId) || "",
+    customerName: "Cliente",
+    customerPhone: "",
     status: (raw.status as OrderStatus) ?? "PICKUP_ASSIGNED",
     priority: false,
     items: domainItems,
@@ -331,14 +323,17 @@ export function mapBackendOrderToDomain(
     delivery,
     facilityName: assignedFacility,
     assignedDriverName: fallbackDriverName,
-    paymentMethod: "Billetera digital",
+    paymentMethod: "",
     paymentStatus: raw.paymentStatus === "PAID" ? "PAGADO" : "PENDIENTE",
     timeline,
     createdAt: raw.createdAt,
     fulfillmentPlan,
     pricingModel: ("pricingModel" in raw && raw.pricingModel) || "FIXED",
     pricingStatus: (raw.pricingStatus as PricingStatus) || "CALCULATED",
-    pricePerLb: 1.75,
+    pricePerLb:
+      "pricePerPound" in raw && raw.pricePerPound
+        ? parseFloat(String(raw.pricePerPound))
+        : 0,
     handoffs: [],
     adjustments: [],
     canChangeOutboundMethod: false,
