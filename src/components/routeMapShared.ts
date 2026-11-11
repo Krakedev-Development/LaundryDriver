@@ -15,7 +15,7 @@ export const OSM_TILE_URLS = {
 export type MapThemeMode = keyof typeof OSM_TILE_URLS;
 export type StopKind = "PICKUP" | "DELIVERY" | "FACILITY";
 
-/** Normalizes legacy demo coordinates around Guayaquil base (-2.1894, -79.8891). */
+/** Normalizes legacy placeholder coordinates around Guayaquil base (-2.1894, -79.8891). */
 export function normalizeGuayaquilCoords(
   origin: { latitude: number; longitude: number },
   destination: { latitude: number; longitude: number },

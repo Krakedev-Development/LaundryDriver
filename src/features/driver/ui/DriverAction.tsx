@@ -83,7 +83,7 @@ export function DriverAction({ order }: { order: Order }) {
                     );
                   }
                 } catch {
-                  // Fallback for offline or demo testing
+                  // Fallback for offline testing
                 }
               }
               execute((r) => r.driverAction(order.id, action[1]));

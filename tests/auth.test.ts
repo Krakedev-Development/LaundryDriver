@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { test } from "node:test";
 import { authenticateSession } from "@laundry/mobile-auth";
 import { driverHarness } from "./driver.fixture";
-import { DEMO_PASSWORD_HASH } from "./fixtures/seedState";
+import { TEST_PASSWORD_HASH } from "./fixtures/seedState";
 import { visibleOrders } from "../src/domain/repository";
 import {
   authService,
@@ -28,11 +28,11 @@ test("driver app accepts only provisioned driver credentials and exposes no regi
     ),
   );
   h.run((repo) =>
-    repo.login(" CARLOS.MENDOZA@LAUNDRYFRESH.COM ", DEMO_PASSWORD_HASH),
+    repo.login(" CARLOS.MENDOZA@LAUNDRYFRESH.COM ", TEST_PASSWORD_HASH),
   );
   assert.equal(decodeState(JSON.stringify(h.state)).session?.role, "DRIVER");
   assert.throws(() =>
-    h.run((repo) => repo.login("maria.torres@gmail.com", DEMO_PASSWORD_HASH)),
+    h.run((repo) => repo.login("maria.torres@gmail.com", TEST_PASSWORD_HASH)),
   );
   assert.throws(
     () =>
@@ -57,7 +57,7 @@ test("driver app accepts only provisioned driver credentials and exposes no regi
     authenticateSession(
       h.state.accounts,
       h.state.driver.email,
-      DEMO_PASSWORD_HASH,
+      TEST_PASSWORD_HASH,
       "CLIENT",
     ),
   );

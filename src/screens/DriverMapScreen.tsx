@@ -114,7 +114,7 @@ export function DriverMapScreen({ route }: ScreenProps<"DriverMap">) {
         </View>
 
         <View style={styles.badgesRow}>
-          <Badge>Mapa de posición y ruta demo</Badge>
+          <Badge>Mapa de posición y ruta simulada</Badge>
           <Badge>{d.vehiclePlate}</Badge>
         </View>
 

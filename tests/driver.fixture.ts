@@ -1,5 +1,5 @@
 import { transact, type LaundryRepository } from '../src/domain/repository';
-import { DEMO_PASSWORD_HASH, initializeSeededState } from './fixtures/seedState';
+import { TEST_PASSWORD_HASH, initializeSeededState } from './fixtures/seedState';
 
 export const now = new Date('2026-10-20T12:00:00Z');
 export function driverHarness() {
@@ -13,7 +13,7 @@ export function driverHarness() {
     },
     // Inicia sesión con la cuenta del estado de prueba.
     signIn() {
-      harness.run(repo => repo.login(state.driver.email, DEMO_PASSWORD_HASH));
+      harness.run(repo => repo.login(state.driver.email, TEST_PASSWORD_HASH));
     },
   };
   return harness;

@@ -18,7 +18,7 @@ La aplicación tiene identidad propia: `com.laundrycleanfresh.driver` y esquema 
 
 ## Acceso
 
-La cuenta demo de chofer es `carlos.mendoza@laundryfresh.com`, contraseña `123456`. Hay un único acceso rápido «Chofer demo». No existe registro público, creación de clientes ni cambio de rol. La cuenta de chofer corresponde al alta administrativa; si tiene contraseña temporal, debe cambiarla antes de acceder a su ruta.
+La app arranca sin sesión ni datos: el chofer entra con las credenciales que le entrega administración. No existe registro público, creación de clientes ni cambio de rol. La cuenta de chofer corresponde al alta administrativa; si tiene contraseña temporal, debe cambiarla antes de acceder a su ruta.
 
 El MVP utiliza una cuenta preconfigurada que representa esa provisión administrativa. La creación realizada en LaundryWeb todavía no se sincroniza con esta app: no se agregó backend ni transporte entre aplicaciones.
 
@@ -42,7 +42,7 @@ La [matriz de separación](docs/ROLE_SPLIT.md) detalla el destino de cada pantal
 
 ## Documentación funcional
 
-- [Flujos de LaundryDriver](docs/FLUJOS-DRIVER-DEMO.md): pantallas, recorridos implementados y límites del MVP.
+- [Flujos de LaundryDriver](docs/FLUJOS-DRIVER.md): pantallas, recorridos implementados y límites del MVP.
 - [Diagramas de flujos](docs/DIAGRAMAS-FLUJOS-DRIVER.md): navegación, recogida, custodia, planta y entrega.
 - [Revisión de lógica de negocio](docs/REVISION-LOGICA-NEGOCIO.md): reglas existentes, hallazgos y decisiones pendientes.
 - [Propuesta de organización de módulos](docs/PROPUESTA-ORGANIZACION-MODULOS.md): estructura actual y evolución sugerida.

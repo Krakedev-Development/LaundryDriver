@@ -26,7 +26,7 @@ export function ChatScreen({ route }: ScreenProps<"Chat">) {
     <Page scroll={false}>
       <View>
         <Title>{recipient ?? "Chat de solicitud"}</Title>
-        <Body muted>{o.id} · Mensajes locales de demostración</Body>
+        <Body muted>{o.id} · Mensajes locales</Body>
       </View>
       <FlatList
         ref={list}
