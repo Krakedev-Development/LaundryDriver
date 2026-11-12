@@ -7,7 +7,7 @@ import { useLaundryNavigation } from "../../../navigation/useLaundryNavigation";
 import { driverOrdersService } from "../../../services/orders/driverOrdersService";
 
 export function usePickupConfirmation(order: Order | undefined) {
-  const { execute } = useApp();
+  const { execute, state } = useApp();
   const navigation = useLaundryNavigation();
   const feedbackAction = useAction();
   const [checked, setChecked] = useState(false),
@@ -46,6 +46,14 @@ export function usePickupConfirmation(order: Order | undefined) {
           code.trim() || undefined,
         ),
       );
+
+      void driverOrdersService
+        .updateLocation({
+          latitude: state.driver.currentLat || -2.1894,
+          longitude: state.driver.currentLng || -79.8891,
+          status: "ON_SERVICE",
+        })
+        .catch(() => {});
     }, "Recogida confirmada.");
 
     if (ok) {
@@ -78,6 +86,14 @@ export function usePickupConfirmation(order: Order | undefined) {
         }
         r.driverAction(order.id, "ARRIVE_FACILITY");
       });
+
+      void driverOrdersService
+        .updateLocation({
+          latitude: state.driver.currentLat || -2.1894,
+          longitude: state.driver.currentLng || -79.8891,
+          status: "AVAILABLE",
+        })
+        .catch(() => {});
     }, "Llegada a planta registrada.");
 
     if (ok) {

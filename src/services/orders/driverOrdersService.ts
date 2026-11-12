@@ -106,6 +106,33 @@ export interface ListOrdersQuery {
   pageSize?: number;
 }
 
+export interface UpdateDriverLocationPayload {
+  latitude: number;
+  longitude: number;
+  status?: "AVAILABLE" | "ON_SERVICE" | "BREAK" | "OFFLINE";
+}
+
+export interface BackendDriverProfile {
+  id: string;
+  userId: string;
+  facilityId: string | null;
+  vehicle: string | null;
+  plate: string | null;
+  status: "AVAILABLE" | "ON_SERVICE" | "BREAK" | "OFFLINE";
+  latitude: number | null;
+  longitude: number | null;
+  locationAt: string | null;
+  user?: {
+    name: string;
+    email: string;
+    phone: string | null;
+  };
+  facility?: {
+    name: string;
+  } | null;
+  activeLegsCount?: number;
+}
+
 export interface TransitionPayload {
   to: string;
   expectedVersion: number;
@@ -486,6 +513,20 @@ export const driverOrdersService = {
       expectedVersion,
       note,
       explicitToken,
+    );
+  },
+
+  async updateLocation(
+    payload: UpdateDriverLocationPayload,
+    explicitToken?: string | null,
+  ): Promise<BackendDriverProfile> {
+    const token = await resolveToken(explicitToken);
+    return await apiClient.patch<BackendDriverProfile>(
+      "/drivers/me/location",
+      payload,
+      {
+        accessToken: token,
+      },
     );
   },
 };

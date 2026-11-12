@@ -4,8 +4,8 @@ import {
   useSearch,
 } from "../../components/presentation";
 import { OrderList } from "../../components/OrderList";
-import { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Page } from "../../components/Page";
 import { Icon, Title, contentColors } from "../../components/ui";
 import { useApp } from "../../store/AppProvider";
@@ -14,6 +14,7 @@ import { useLaundryNavigation } from "../../navigation/useLaundryNavigation";
 import { ordersStyles } from "../../components/OrdersPresentation";
 import { selectDriverServices } from "../../entities/order/model/driverOrderSelectors";
 import { driverOrdersService } from "../../services/orders/driverOrdersService";
+import { tactile } from "../../design-system/interaction";
 
 export function DriverServicesScreen() {
   const navigation = useLaundryNavigation();
@@ -22,26 +23,23 @@ export function DriverServicesScreen() {
   const [search, setSearch] = useState("");
   const [syncing, setSyncing] = useState(false);
 
-  useEffect(() => {
-    let active = true;
-    async function loadDriverServices() {
-      try {
-        setSyncing(true);
-        const assigned = await driverOrdersService.getAssignedOrders();
-        if (active && assigned.length > 0) {
-          execute((repo) => repo.syncAssignedOrders(assigned));
-        }
-      } catch {
-        // Fallback for offline sessions
-      } finally {
-        if (active) setSyncing(false);
+  const loadDriverServices = useCallback(async () => {
+    try {
+      setSyncing(true);
+      const assigned = await driverOrdersService.getAssignedOrders();
+      if (assigned.length > 0) {
+        execute((repo) => repo.syncAssignedOrders(assigned));
       }
+    } catch {
+      // Fallback for offline sessions
+    } finally {
+      setSyncing(false);
     }
-    void loadDriverServices();
-    return () => {
-      active = false;
-    };
   }, [execute]);
+
+  useEffect(() => {
+    void loadDriverServices();
+  }, [loadDriverServices]);
 
   const query = useSearch(search);
   const orders = selectDriverServices(visibleOrders(state), upcoming, query);
@@ -51,11 +49,25 @@ export function DriverServicesScreen() {
       <View style={styles.headerRow}>
         <Title style={ordersStyles.screenTitle}>Mis servicios</Title>
         <View style={styles.headerBadges}>
-          {syncing && (
-            <View style={styles.syncBadge}>
-              <Icon name="sync-outline" size={12} color={contentColors.primary} />
-            </View>
-          )}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Actualizar listado de servicios"
+            disabled={syncing}
+            onPress={() => {
+              tactile("light");
+              void loadDriverServices();
+            }}
+            style={({ pressed }) => [
+              styles.syncBadge,
+              { opacity: pressed || syncing ? 0.6 : 1 },
+            ]}
+          >
+            <Icon
+              name="sync-outline"
+              size={14}
+              color={contentColors.primary}
+            />
+          </Pressable>
           <View style={styles.countBadge}>
             <Icon name="layers-outline" size={14} color={contentColors.primary} />
             <Text style={styles.countText}>
@@ -104,8 +116,10 @@ const styles = StyleSheet.create({
   },
   syncBadge: {
     padding: 6,
-    borderRadius: 999,
+    borderRadius: 8,
     backgroundColor: contentColors.soft,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
   countBadge: {
     flexDirection: "row",
