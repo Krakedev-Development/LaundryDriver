@@ -6,23 +6,17 @@ import { Body, Button, Card, Field, useAction } from "../../../components/ui";
 import { LoginBrand, loginStyles } from "../../../components/LoginPresentation";
 import { passwordHash } from "../../../services/passwordHash";
 export function LoginForm({
-  initialEmail,
-  demoLabel,
   onLogin,
-  onDemo,
   onRegister,
   notice,
 }: {
-  initialEmail: string;
-  demoLabel: string;
   onLogin(email: string, hash: string, password: string): void | Promise<void>;
-  onDemo(): void;
   onRegister?: () => void;
   notice?: ReactNode;
 }) {
   const a = useAction();
-  const [email, setEmail] = useState(initialEmail),
-    [password, setPassword] = useState("123456");
+  const [email, setEmail] = useState(""),
+    [password, setPassword] = useState("");
   return (
     <Page backgroundColor="#F7F8FD" contentContainerStyle={loginStyles.page}>
       <View style={loginStyles.content}>
@@ -59,7 +53,7 @@ export function LoginForm({
                 onPress={() =>
                   a.run(
                     () => {},
-                    "Para recuperar el acceso, contacta a soporte@laundryfresh.com. En esta demo no se envían correos.",
+                    "Para recuperar el acceso, contacta a soporte@laundryfresh.com.",
                   )
                 }
               />
@@ -83,11 +77,7 @@ export function LoginForm({
           <View style={loginStyles.divider} />
           {notice}
         </Card>
-        <LoginAccessOptions
-          demoLabel={demoLabel}
-          onDemo={onDemo}
-          onRegister={onRegister}
-        />
+        <LoginAccessOptions onRegister={onRegister} />
       </View>
     </Page>
   );

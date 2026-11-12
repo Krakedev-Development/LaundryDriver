@@ -75,7 +75,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .catch(() => {
         if (mounted.current)
           setError(
-            "No se pudieron cargar los datos locales. Puedes reintentar o restablecer la demo.",
+            "No se pudieron cargar los datos locales. Puedes reintentar o restablecer los datos locales.",
           );
       });
   };

@@ -1,7 +1,7 @@
 import type { AppState } from "../domain/models";
 import { migrateFulfillmentPolicy } from "../domain/fulfillmentPolicy";
 
-export const STORAGE_KEY = "laundry.driver-mvp.v1";
+export const STORAGE_KEY = "laundry.driver-mvp.v2";
 export interface StorageAdapter {
   getItem(key: string): Promise<string | null>;
   setItem(key: string, value: string): Promise<void>;

@@ -32,7 +32,7 @@ export function DriverServicesScreen() {
           execute((repo) => repo.syncAssignedOrders(assigned));
         }
       } catch {
-        // Fallback for offline or local demo sessions
+        // Fallback for offline sessions
       } finally {
         if (active) setSyncing(false);
       }

@@ -31,7 +31,7 @@ export function useDeliveryConfirmation(order: Order | undefined) {
           );
         }
       } catch {
-        // Fallback for offline or demo testing
+        // Fallback for offline testing
       }
 
       execute((r) =>

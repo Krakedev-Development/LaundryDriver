@@ -1,5 +1,4 @@
 import { initialSlots } from "./catalog";
-import { createSeedState } from "./seed";
 import { type AppState } from "./models";
 export const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 export function today(now = new Date()): string {
@@ -15,17 +14,34 @@ export function scheduleDate(date: string, now = new Date()): string {
   if (/^mañana$/i.test(date)) return today(new Date(now.getTime() + 86400000));
   return date;
 }
+// El producto arranca sin datos: el chofer, sus servicios y los cupos llegan de la API.
 export function initializeState(now = new Date()): AppState {
-  const s = createSeedState();
-  s.timeSlots.forEach((slot) => {
-    slot.date = scheduleDate(slot.date, now);
-  });
-  s.orders.forEach((o) => {
-    o.pickup.date = scheduleDate(o.pickup.date, now);
-    o.delivery.date = scheduleDate(o.delivery.date, now);
-    o.fulfillmentPlan.inbound.scheduledDate = o.pickup.date;
-    o.fulfillmentPlan.outbound.scheduledDate = o.delivery.date;
-  });
+  const s: AppState = {
+    version: 1,
+    customers: [],
+    driver: {
+      id: "",
+      name: "",
+      email: "",
+      phone: "",
+      operationalStatus: "AVAILABLE",
+      vehicleModel: "",
+      vehicleColor: "",
+      vehiclePlate: "",
+      facilityName: "",
+      zoneName: "",
+      mustChangePassword: false,
+      currentLat: 0,
+      currentLng: 0,
+      completedDeliveriesCount: 0,
+    },
+    session: null,
+    accounts: [],
+    orders: [],
+    notifications: [],
+    chatMessages: {},
+    timeSlots: [],
+  };
   refreshSchedule(s, now);
   return s;
 }

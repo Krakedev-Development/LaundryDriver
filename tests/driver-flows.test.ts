@@ -5,28 +5,28 @@ import { decodeState } from '../src/store/persistence';
 
 test('pickup, custody, plant, delivery, recipient and evidence survive reload', () => {
   const h = driverHarness();
-  h.run(repo => repo.demoLogin('DRIVER'));
+  h.signIn();
   const order = h.state.orders.find(order => order.id === 'SOL-4587')!;
   const id = order.id, count = h.state.driver.completedDeliveriesCount;
   h.run(repo => repo.driverAction(id, 'ARRIVE_PICKUP'));
   const before = JSON.stringify(h.state);
   assert.throws(() => h.run(repo => repo.driverConfirmPickup(id, 7, '', undefined, 'incorrecto')), /código/);
   assert.equal(JSON.stringify(h.state), before);
-  h.run(repo => repo.driverConfirmPickup(id, 7, 'Bolsa sellada', 'demo://recogida'));
+  h.run(repo => repo.driverConfirmPickup(id, 7, 'Bolsa sellada', 'test://recogida'));
   h.run(repo => repo.driverAction(id, 'GO_FACILITY'));
   h.run(repo => repo.driverAction(id, 'ARRIVE_FACILITY'));
   for (let step = 0; step < 4; step++) h.run(repo => repo.advancePlantOperation(id));
   assert.equal(h.state.orders.find(order => order.id === id)!.status, 'DELIVERY_ASSIGNED');
   h.run(repo => repo.driverAction(id, 'START_DELIVERY'));
   h.run(repo => repo.driverAction(id, 'ARRIVE_DELIVERY'));
-  h.run(repo => repo.driverConfirmDelivery(id, 'Ana Torres', 'Familiar', 'Recepción conforme', 'demo://entrega'));
+  h.run(repo => repo.driverConfirmDelivery(id, 'Ana Torres', 'Familiar', 'Recepción conforme', 'test://entrega'));
   const saved = decodeState(JSON.stringify(h.state));
   const completed = saved.orders.find(order => order.id === id)!;
   assert.equal(completed.status, 'DELIVERED');
   assert.equal(completed.pickup.garmentCountConfirmed, 7);
-  assert.equal(completed.pickup.evidencePhotoUri, 'demo://recogida');
+  assert.equal(completed.pickup.evidencePhotoUri, 'test://recogida');
   assert.equal(completed.delivery.recipientName, 'Ana Torres');
-  assert.equal(completed.delivery.evidencePhotoUri, 'demo://entrega');
+  assert.equal(completed.delivery.evidencePhotoUri, 'test://entrega');
   assert.equal(completed.handoffs.filter(handoff => handoff.status === 'USED').length, 4);
   assert.equal(saved.driver.completedDeliveriesCount, count + 1);
   assert.throws(() => h.run(repo => repo.driverConfirmDelivery(id, 'Otra persona', 'Cliente', '')), /llegada/);
@@ -34,7 +34,7 @@ test('pickup, custody, plant, delivery, recipient and evidence survive reload', 
 
 test('pick up finishes at the facility without creating a home delivery', () => {
   const h = driverHarness();
-  h.run(repo => repo.demoLogin('DRIVER'));
+  h.signIn();
   const order = h.state.orders.find(order => order.id === 'SOL-HS-001')!;
   assert.equal(order.fulfillmentPlan.mode, 'HOME_STORE');
   assert.throws(() => h.run(repo => repo.driverAction(order.id, 'START_DELIVERY')), /estado/);
@@ -45,7 +45,7 @@ test('pick up finishes at the facility without creating a home delivery', () => 
 
 test('availability, assignment and payment guards remain mandatory', () => {
   const h = driverHarness();
-  h.run(repo => repo.demoLogin('DRIVER'));
+  h.signIn();
   h.run(repo => repo.setDriverOperationalStatus('BREAK'));
   assert.throws(() => h.run(repo => repo.driverAction('SOL-4587', 'ARRIVE_PICKUP')), /disponible/);
   h.run(repo => repo.setDriverOperationalStatus('AVAILABLE'));

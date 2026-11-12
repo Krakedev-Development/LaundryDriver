@@ -24,7 +24,7 @@ import {
   stopKindMeta,
   type MapThemeMode,
   type RouteMapProps,
-} from "./RouteMap";
+} from "./routeMapShared";
 
 const ZOOM = 14;
 const TILE_SIZE = 256;

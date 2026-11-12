@@ -1,6 +1,7 @@
-import { facilities, initialSlots } from "./catalog";
-import { handoffLabels, modeFor, statusLabels, type AppState, type Customer, type Handoff, type HandoffType, type Leg, type Method, type Order, type OrderItem, type OrderStatus } from "./models";
-export const DEMO_PASSWORD_HASH =
+import { scheduleDate } from "../../src/domain/state";
+import { facilities, initialSlots } from "./testCatalog";
+import { handoffLabels, modeFor, statusLabels, type AppState, type Customer, type Handoff, type HandoffType, type Leg, type Method, type Order, type OrderItem, type OrderStatus } from "../../src/domain/models";
+export const TEST_PASSWORD_HASH =
   "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92";
 export function seedCustomer(): Customer {
   return {id: "cust-1",
@@ -329,7 +330,7 @@ accounts:[{
         id: "drv-1",
         email: "carlos.mendoza@laundryfresh.com",
         role: "DRIVER",
-        passwordHash: DEMO_PASSWORD_HASH,
+        passwordHash: TEST_PASSWORD_HASH,
       }],
 orders: [hh, weight, adj, hs, ss, sh],
 notifications: [
@@ -386,4 +387,18 @@ chatMessages: {
       ],
     },
 timeSlots: initialSlots.map((s) => ({ ...s }))};
+}
+// Estado de prueba equivalente al que antes traía el producto: un chofer con servicios.
+export function initializeSeededState(now = new Date()): AppState {
+  const s = createSeedState();
+  s.timeSlots.forEach((slot) => {
+    slot.date = scheduleDate(slot.date, now);
+  });
+  s.orders.forEach((o) => {
+    o.pickup.date = scheduleDate(o.pickup.date, now);
+    o.delivery.date = scheduleDate(o.delivery.date, now);
+    o.fulfillmentPlan.inbound.scheduledDate = o.pickup.date;
+    o.fulfillmentPlan.outbound.scheduledDate = o.delivery.date;
+  });
+  return s;
 }
