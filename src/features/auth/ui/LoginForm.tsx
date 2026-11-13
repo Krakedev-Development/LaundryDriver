@@ -8,10 +8,13 @@ import { passwordHash } from "../../../services/passwordHash";
 export function LoginForm({
   onLogin,
   onRegister,
+  onForgotPassword,
   notice,
 }: {
   onLogin(email: string, hash: string, password: string): void | Promise<void>;
   onRegister?: () => void;
+  // Sin esta función (p. ej. choferes, que gestiona el administrador) se muestra soporte.
+  onForgotPassword?: () => void;
   notice?: ReactNode;
 }) {
   const a = useAction();
@@ -50,11 +53,14 @@ export function LoginForm({
                 variant="ghost"
                 style={loginStyles.forgot}
                 textStyle={loginStyles.forgotText}
+                testID="login_forgot_password"
                 onPress={() =>
-                  a.run(
-                    () => {},
-                    "Para recuperar el acceso, contacta a soporte@laundryfresh.com.",
-                  )
+                  onForgotPassword
+                    ? onForgotPassword()
+                    : a.run(
+                        () => {},
+                        "Para recuperar el acceso, contacta a soporte@laundryfresh.com.",
+                      )
                 }
               />
             }
