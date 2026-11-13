@@ -19,6 +19,11 @@ import {
   routeStyles,
 } from "../../../components/DriverRoutePresentation";
 import { tactile } from "../../../design-system/interaction";
+import {
+  openGoogleMapsDirections,
+  openWazeDirections,
+  resolveOrderNavigationTarget,
+} from "../../../services/navigation/externalMaps";
 import { DriverAction } from "./DriverAction";
 
 export function NextServiceCard({ order: next }: { order: Order }) {
@@ -27,6 +32,7 @@ export function NextServiceCard({ order: next }: { order: Order }) {
   const address = isPickup ? next.pickup.addressFull : next.delivery.addressFull;
   const timeSlot = isPickup ? next.pickup.timeSlot : next.delivery.timeSlot;
   const count = garmentCount(next);
+  const navTarget = resolveOrderNavigationTarget(next);
 
   return (
     <Card style={routeStyles.next}>
@@ -89,10 +95,10 @@ export function NextServiceCard({ order: next }: { order: Order }) {
         ) : null}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Navegar a la parada"
+          accessibilityLabel="Ir con Google Maps"
           onPress={() => {
             tactile("light");
-            navigation.navigate("DriverMap", { orderId: next.id });
+            void openGoogleMapsDirections(navTarget.latitude, navTarget.longitude);
           }}
           style={({ pressed }) => [
             styles.quickIconBtn,
@@ -114,6 +120,32 @@ export function NextServiceCard({ order: next }: { order: Order }) {
             {timeSlot}
           </Body>
         </RouteMetadata>
+      </View>
+
+      <View style={styles.externalNavRow}>
+        <Button
+          label="Ir con Google Maps"
+          icon="navigate-outline"
+          haptic="medium"
+          style={styles.googleMapsBtn}
+          onPress={() => {
+            void openGoogleMapsDirections(
+              navTarget.latitude,
+              navTarget.longitude,
+            );
+          }}
+        />
+        <Button
+          label="Ir con Waze"
+          secondary
+          icon="compass-outline"
+          haptic="medium"
+          style={styles.wazeBtn}
+          textStyle={styles.wazeBtnText}
+          onPress={() => {
+            void openWazeDirections(navTarget.latitude, navTarget.longitude);
+          }}
+        />
       </View>
 
       <DriverAction order={next} />
@@ -213,5 +245,22 @@ const styles = StyleSheet.create({
   quickNavBtn: {
     backgroundColor: contentColors.primary,
     borderColor: contentColors.primary,
+  },
+  externalNavRow: {
+    gap: 8,
+  },
+  googleMapsBtn: {
+    backgroundColor: contentColors.primary,
+    borderRadius: 12,
+  },
+  wazeBtn: {
+    backgroundColor: "#F0F9FF",
+    borderColor: "#38BDF8",
+    borderWidth: 1.5,
+    borderRadius: 12,
+  },
+  wazeBtnText: {
+    color: "#0369A1",
+    fontWeight: "700",
   },
 });

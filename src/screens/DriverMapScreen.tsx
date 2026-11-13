@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { StatusChip } from "../components/presentation";
-import { Linking, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Platform, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { Page } from "../components/Page";
 import {
   Badge,
@@ -27,6 +27,10 @@ import { facilities } from "../domain/catalog";
 import type { ScreenProps } from "../navigation/routes";
 import { useLaundryNavigation } from "../navigation/useLaundryNavigation";
 import { driverOrdersService } from "../services/orders/driverOrdersService";
+import {
+  openGoogleMapsDirections,
+  openWazeDirections,
+} from "../services/navigation/externalMaps";
 
 function destinationFor(order: Order): {
   latitude: number;
@@ -95,16 +99,6 @@ export function DriverMapScreen({ route }: ScreenProps<"DriverMap">) {
 
   return (
     <Page>
-      <Card style={styles.mapCard}>
-        <RouteMap
-          height={Math.max(260, Math.min(430, height * 0.46))}
-          origin={normalized.origin}
-          destination={{ ...destination, ...normalized.destination }}
-          stopKind={destination.stopKind}
-          speedKmh={34}
-          statusLabel="EN RUTA"
-        />
-      </Card>
       <Card style={styles.telemetryCard}>
         <View style={styles.headerRow}>
           <View style={styles.titleGroup}>
@@ -127,14 +121,14 @@ export function DriverMapScreen({ route }: ScreenProps<"DriverMap">) {
           <View style={{ flex: 1, gap: 2 }}>
             <Body style={styles.addressText}>{destination.addressFull}</Body>
             <Text style={styles.coordsText}>
-              Sector Guayaquil ({GUAYAQUIL_BASE.latitude.toFixed(4)},{" "}
-              {GUAYAQUIL_BASE.longitude.toFixed(4)})
+              Coordenadas ({normalized.destination.latitude.toFixed(4)},{" "}
+              {normalized.destination.longitude.toFixed(4)})
             </Text>
           </View>
         </View>
 
         <View style={styles.badgesRow}>
-          <Badge>Mapa de posición y ruta simulada</Badge>
+          <Badge>Navegación GPS externa</Badge>
           <Badge>{d.vehiclePlate}</Badge>
         </View>
 
@@ -152,8 +146,9 @@ export function DriverMapScreen({ route }: ScreenProps<"DriverMap">) {
             style={styles.googleMapsBtn}
             onPress={() => {
               void a.asyncRun(() =>
-                Linking.openURL(
-                  `https://www.google.com/maps/dir/?api=1&destination=${normalized.destination.latitude},${normalized.destination.longitude}&travelmode=driving`,
+                openGoogleMapsDirections(
+                  normalized.destination.latitude,
+                  normalized.destination.longitude,
                 ),
               );
             }}
@@ -168,8 +163,9 @@ export function DriverMapScreen({ route }: ScreenProps<"DriverMap">) {
             textStyle={styles.wazeBtnText}
             onPress={() => {
               void a.asyncRun(() =>
-                Linking.openURL(
-                  `https://waze.com/ul?ll=${normalized.destination.latitude},${normalized.destination.longitude}&navigate=yes`,
+                openWazeDirections(
+                  normalized.destination.latitude,
+                  normalized.destination.longitude,
                 ),
               );
             }}
@@ -183,6 +179,18 @@ export function DriverMapScreen({ route }: ScreenProps<"DriverMap">) {
           onPress={() => navigation.navigate("Chat", { orderId: o.id })}
         />
       </Card>
+      {Platform.OS === "web" ? (
+        <Card style={styles.mapCard}>
+          <RouteMap
+            height={Math.max(260, Math.min(430, height * 0.46))}
+            origin={normalized.origin}
+            destination={{ ...destination, ...normalized.destination }}
+            stopKind={destination.stopKind}
+            speedKmh={34}
+            statusLabel="EN RUTA"
+          />
+        </Card>
+      ) : null}
     </Page>
   );
 }

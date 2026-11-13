@@ -1,11 +1,17 @@
+import { StyleSheet, View } from "react-native";
 import { Body, Button, Card } from "../../../components/ui";
 import { type Order } from "../../../domain/models";
-import { useLaundryNavigation } from "../../../navigation/useLaundryNavigation";
 import {
   DriverSectionTitle,
   DriverServiceMeta,
   driverServiceStyles,
 } from "../../../components/DriverServicePresentation";
+import {
+  openGoogleMapsDirections,
+  openWazeDirections,
+  resolveOrderNavigationTarget,
+} from "../../../services/navigation/externalMaps";
+
 export function ServiceDestination({
   order,
   pickup,
@@ -13,8 +19,9 @@ export function ServiceDestination({
   order: Order;
   pickup: boolean;
 }) {
-  const navigation = useLaundryNavigation();
   const destination = pickup ? order.pickup : order.delivery;
+  const navTarget = resolveOrderNavigationTarget(order);
+
   return (
     <Card style={driverServiceStyles.card}>
       <DriverSectionTitle icon="location-outline">
@@ -31,14 +38,51 @@ export function ServiceDestination({
           Instrucciones: {order.pickup.notes}
         </Body>
       )}
-      <Button
-        label="Ver mapa y navegación"
-        icon="map-outline"
-        secondary
-        variant="primary"
-        style={driverServiceStyles.primary}
-        onPress={() => navigation.navigate("DriverMap", { orderId: order.id })}
-      />
+      <View style={styles.actions}>
+        <Button
+          label="Ir con Google Maps"
+          icon="navigate-outline"
+          haptic="medium"
+          style={styles.googleMapsBtn}
+          onPress={() => {
+            void openGoogleMapsDirections(
+              navTarget.latitude,
+              navTarget.longitude,
+            );
+          }}
+        />
+        <Button
+          label="Ir con Waze"
+          icon="compass-outline"
+          secondary
+          haptic="medium"
+          style={styles.wazeBtn}
+          textStyle={styles.wazeBtnText}
+          onPress={() => {
+            void openWazeDirections(navTarget.latitude, navTarget.longitude);
+          }}
+        />
+      </View>
     </Card>
   );
 }
+
+const styles = StyleSheet.create({
+  actions: {
+    gap: 8,
+    marginTop: 4,
+  },
+  googleMapsBtn: {
+    borderRadius: 12,
+  },
+  wazeBtn: {
+    backgroundColor: "#F0F9FF",
+    borderColor: "#38BDF8",
+    borderWidth: 1.5,
+    borderRadius: 12,
+  },
+  wazeBtnText: {
+    color: "#0369A1",
+    fontWeight: "700",
+  },
+});
