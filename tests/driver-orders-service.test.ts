@@ -314,3 +314,84 @@ test("driverOrdersService connects route and transitions to the backend API", as
     await clearAuthSession();
   }
 });
+
+test("driverOrdersService reports live location and status to PATCH /drivers/me/location", async () => {
+  const originalFetch = globalThis.fetch;
+  const requests: Array<{
+    url: string;
+    method: string;
+    headers: Record<string, string>;
+    body: unknown;
+  }> = [];
+
+  try {
+    await clearAuthSession();
+    await saveAuthSession({
+      user: {
+        id: "driver-gye-1",
+        email: "carlos.mendoza@laundryfresh.com",
+        name: "Carlos Mendoza",
+        role: "DRIVER",
+        status: "ACTIVE",
+        facilityId: "fac-gye-central",
+        facilityName: "Planta Kennedy Norte",
+      },
+      tokens: {
+        accessToken: "driver-token-abc",
+        refreshToken: "driver-refresh-abc",
+        expiresIn: 900,
+      },
+    });
+
+    globalThis.fetch = async (input, init) => {
+      const url = typeof input === "string" ? input : input.toString();
+      const method = init?.method ?? "GET";
+      const headers = (init?.headers ?? {}) as Record<string, string>;
+      const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+      requests.push({ url, method, headers, body });
+
+      if (url.endsWith("/drivers/me/location") && method === "PATCH") {
+        assert.equal(headers.Authorization, "Bearer driver-token-abc");
+        return new Response(
+          JSON.stringify({
+            id: "drv-record-1",
+            userId: "driver-gye-1",
+            facilityId: "fac-gye-central",
+            vehicle: "Camioneta 1",
+            plate: "GYE-1234",
+            latitude: (body as { latitude: number }).latitude,
+            longitude: (body as { longitude: number }).longitude,
+            locationAt: "2026-11-11T19:30:00.000Z",
+            status: (body as { status?: string }).status ?? "AVAILABLE",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+
+      return new Response(JSON.stringify({ message: "Not Found" }), {
+        status: 404,
+      });
+    };
+
+    const telemetry = await driverOrdersService.updateLocation({
+      latitude: -2.1894,
+      longitude: -79.8891,
+      status: "ON_SERVICE",
+    });
+
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].method, "PATCH");
+    assert.ok(requests[0].url.endsWith("/drivers/me/location"));
+    assert.deepEqual(requests[0].body, {
+      latitude: -2.1894,
+      longitude: -79.8891,
+      status: "ON_SERVICE",
+    });
+    assert.equal(telemetry.status, "ON_SERVICE");
+    assert.equal(telemetry.latitude, -2.1894);
+    assert.equal(telemetry.longitude, -79.8891);
+  } finally {
+    globalThis.fetch = originalFetch;
+    await clearAuthSession();
+  }
+});

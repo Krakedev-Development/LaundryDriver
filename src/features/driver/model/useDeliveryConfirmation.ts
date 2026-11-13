@@ -6,7 +6,7 @@ import { useLaundryNavigation } from "../../../navigation/useLaundryNavigation";
 import { driverOrdersService } from "../../../services/orders/driverOrdersService";
 
 export function useDeliveryConfirmation(order: Order | undefined) {
-  const { execute } = useApp();
+  const { execute, state } = useApp();
   const navigation = useLaundryNavigation();
   const feedbackAction = useAction();
   const [name, setName] = useState(order?.customerName ?? ""),
@@ -44,6 +44,14 @@ export function useDeliveryConfirmation(order: Order | undefined) {
           code.trim() || undefined,
         ),
       );
+
+      void driverOrdersService
+        .updateLocation({
+          latitude: state.driver.currentLat || -2.1894,
+          longitude: state.driver.currentLng || -79.8891,
+          status: "AVAILABLE",
+        })
+        .catch(() => {});
     }, "Entrega confirmada.");
 
     if (ok) {

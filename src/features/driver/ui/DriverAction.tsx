@@ -6,7 +6,7 @@ import { useLaundryNavigation } from "../../../navigation/useLaundryNavigation";
 import { driverOrdersService } from "../../../services/orders/driverOrdersService";
 
 export function DriverAction({ order }: { order: Order }) {
-  const { execute } = useApp();
+  const { execute, state } = useApp();
   const navigation = useLaundryNavigation();
   const feedbackAction = useAction();
   const actions: Partial<
@@ -87,6 +87,15 @@ export function DriverAction({ order }: { order: Order }) {
                 }
               }
               execute((r) => r.driverAction(order.id, action[1]));
+              const nextStatus =
+                action[1] === "ARRIVE_FACILITY" ? "AVAILABLE" : "ON_SERVICE";
+              void driverOrdersService
+                .updateLocation({
+                  latitude: state.driver.currentLat || -2.1894,
+                  longitude: state.driver.currentLng || -79.8891,
+                  status: nextStatus,
+                })
+                .catch(() => {});
               if (["START_PICKUP", "START_DELIVERY"].includes(action[1])) {
                 navigation.navigate("DriverMap", { orderId: order.id });
               }

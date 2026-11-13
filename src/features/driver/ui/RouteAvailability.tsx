@@ -18,6 +18,10 @@ import {
 } from "../../../domain/models";
 import { routeStyles } from "../../../components/DriverRoutePresentation";
 import { tactile } from "../../../design-system/interaction";
+import {
+  driverOrdersService,
+  GUAYAQUIL_COORDINATES,
+} from "../../../services/orders/driverOrdersService";
 
 const statusTheme: Record<
   OperationalStatus,
@@ -70,6 +74,13 @@ export function RouteAvailability({ orders }: { orders: Order[] }) {
   const handleSelectStatus = (status: OperationalStatus) => {
     tactile("medium");
     execute((r) => r.setDriverOperationalStatus(status));
+    void driverOrdersService
+      .updateLocation({
+        latitude: driver.currentLat || GUAYAQUIL_COORDINATES.center.latitude,
+        longitude: driver.currentLng || GUAYAQUIL_COORDINATES.center.longitude,
+        status,
+      })
+      .catch(() => {});
   };
 
   return (

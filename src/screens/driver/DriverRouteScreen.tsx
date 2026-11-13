@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Page } from "../../components/Page";
 import { Button, Empty, Icon, Title, contentColors } from "../../components/ui";
 import { OrderCard } from "../../components/OrderCard";
@@ -10,33 +10,71 @@ import { useLaundryNavigation } from "../../navigation/useLaundryNavigation";
 import { routeStyles } from "../../components/DriverRoutePresentation";
 import { RouteAvailability } from "../../features/driver/ui/RouteAvailability";
 import { NextServiceCard } from "../../features/driver/ui/NextServiceCard";
-import { driverOrdersService } from "../../services/orders/driverOrdersService";
+import {
+  driverOrdersService,
+  GUAYAQUIL_COORDINATES,
+} from "../../services/orders/driverOrdersService";
+import { tactile } from "../../design-system/interaction";
 
 export function DriverRouteScreen() {
   const navigation = useLaundryNavigation();
   const { state, execute } = useApp();
   const [syncing, setSyncing] = useState(false);
 
+  const fetchAssignedRoute = useCallback(async () => {
+    try {
+      setSyncing(true);
+      const assigned = await driverOrdersService.getAssignedOrders();
+      if (assigned.length > 0) {
+        execute((repo) => repo.syncAssignedOrders(assigned));
+      }
+    } catch {
+      // Fallback for offline sessions
+    } finally {
+      setSyncing(false);
+    }
+  }, [execute]);
+
+  useEffect(() => {
+    void fetchAssignedRoute();
+  }, [fetchAssignedRoute]);
+
+  // Telemetría GPS periódica hacia PATCH /drivers/me/location
   useEffect(() => {
     let active = true;
-    async function fetchAssignedRoute() {
+    const emitLocation = async () => {
       try {
-        setSyncing(true);
-        const assigned = await driverOrdersService.getAssignedOrders();
-        if (active && assigned.length > 0) {
-          execute((repo) => repo.syncAssignedOrders(assigned));
-        }
+        const lat =
+          state.driver.currentLat || GUAYAQUIL_COORDINATES.center.latitude;
+        const lng =
+          state.driver.currentLng || GUAYAQUIL_COORDINATES.center.longitude;
+        await driverOrdersService.updateLocation({
+          latitude: lat,
+          longitude: lng,
+          status: state.driver.operationalStatus,
+        });
       } catch {
-        // Fallback for offline sessions
-      } finally {
-        if (active) setSyncing(false);
+        // Telemetría en segundo plano no bloquea la UI
       }
-    }
-    void fetchAssignedRoute();
+    };
+
+    void emitLocation();
+
+    const interval = setInterval(() => {
+      if (active) {
+        void emitLocation();
+      }
+    }, 25000);
+
     return () => {
       active = false;
+      clearInterval(interval);
     };
-  }, [execute]);
+  }, [
+    state.driver.currentLat,
+    state.driver.currentLng,
+    state.driver.operationalStatus,
+  ]);
 
   const orders = visibleOrders(state).filter(
     (order) =>
@@ -51,12 +89,24 @@ export function DriverRouteScreen() {
       <RouteAvailability orders={orders} />
       <View style={styles.sectionHeaderRow}>
         <Title style={routeStyles.section}>Siguiente servicio</Title>
-        {syncing && (
-          <View style={styles.syncBadge}>
-            <Icon name="sync-outline" size={12} color={contentColors.primary} />
-            <Text style={styles.syncText}>Sincronizando...</Text>
-          </View>
-        )}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Sincronizar ruta con el servidor"
+          disabled={syncing}
+          onPress={() => {
+            tactile("light");
+            void fetchAssignedRoute();
+          }}
+          style={({ pressed }) => [
+            styles.syncBadge,
+            { opacity: pressed || syncing ? 0.6 : 1 },
+          ]}
+        >
+          <Icon name="sync-outline" size={12} color={contentColors.primary} />
+          <Text style={styles.syncText}>
+            {syncing ? "Sincronizando..." : "Actualizar"}
+          </Text>
+        </Pressable>
       </View>
       {next ? (
         <View style={styles.nextContainer}>
@@ -142,11 +192,13 @@ const styles = StyleSheet.create({
   syncBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 8,
     backgroundColor: contentColors.soft,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
   syncText: {
     fontSize: 11,

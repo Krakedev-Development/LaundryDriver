@@ -191,6 +191,13 @@ export class LaundryRepository extends PlantOperations {
     this.state.driver.operationalStatus = status;
   }
 
+  setDriverLocation(latitude: number, longitude: number): void {
+    if (this.state.session?.role !== "DRIVER")
+      throw Error("Se requiere sesión de chofer.");
+    this.state.driver.currentLat = latitude;
+    this.state.driver.currentLng = longitude;
+  }
+
   syncAssignedOrders(apiOrders: Order[]): void {
     const driverId = this.state.session?.id || this.state.driver.id;
     const driverName = this.state.driver.name;
