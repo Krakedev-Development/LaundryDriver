@@ -12,26 +12,31 @@ export function ServiceReceipts({ order }: { order: Order }) {
               {order.pickup.garmentCountConfirmed} prendas ·{" "}
               {order.pickup.pickedUpAt}
             </Body>
-            <Body>{order.pickup.notes}</Body>
-            {order.pickup.evidencePhotoUri && <Badge>Evidencia adjunta</Badge>}
+            {order.pickup.notes ? <Body>{order.pickup.notes}</Body> : null}
+            {order.pickup.evidencePhotoUri ? <Badge>Evidencia adjunta</Badge> : null}
           </Accordion>
         </Card>
       )}
-      {order.delivery.recipientName && (
+      {/* Textos vacíos no pueden quedar sueltos dentro de un View: se usan ternarios. */}
+      {order.delivery.recipientName ? (
         <Card style={driverServiceStyles.accordionCard}>
           <Accordion title="Constancia de entrega" appearance="list">
             <Body>
-              {order.delivery.recipientName} ·{" "}
-              {order.delivery.recipientRelationship}
+              {order.delivery.recipientName}
+              {order.delivery.recipientRelationship
+                ? ` · ${order.delivery.recipientRelationship}`
+                : ""}
             </Body>
             <Body muted>{order.delivery.deliveredAt}</Body>
-            <Body>{order.delivery.deliveryNotes}</Body>
-            {order.delivery.evidencePhotoUri && (
+            {order.delivery.deliveryNotes ? (
+              <Body>{order.delivery.deliveryNotes}</Body>
+            ) : null}
+            {order.delivery.evidencePhotoUri ? (
               <Badge>Evidencia adjunta</Badge>
-            )}
+            ) : null}
           </Accordion>
         </Card>
-      )}
+      ) : null}
     </>
   );
 }

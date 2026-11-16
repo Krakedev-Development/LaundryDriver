@@ -2,11 +2,13 @@ import { useState } from "react";
 import type { Order } from "../../../domain/models";
 import { useAction } from "../../../components/ui";
 import { useApp } from "../../../store/AppProvider";
+import { useLiveLocation } from "./LiveLocationContext";
 import { useLaundryNavigation } from "../../../navigation/useLaundryNavigation";
 import { driverOrdersService } from "../../../services/orders/driverOrdersService";
 
 export function useDeliveryConfirmation(order: Order | undefined) {
-  const { execute, state } = useApp();
+  const { execute } = useApp();
+  const { sendStatus } = useLiveLocation();
   const navigation = useLaundryNavigation();
   const feedbackAction = useAction();
   const [name, setName] = useState(order?.customerName ?? ""),
@@ -45,13 +47,8 @@ export function useDeliveryConfirmation(order: Order | undefined) {
         ),
       );
 
-      void driverOrdersService
-        .updateLocation({
-          latitude: state.driver.currentLat || -2.1894,
-          longitude: state.driver.currentLng || -79.8891,
-          status: "AVAILABLE",
-        })
-        .catch(() => {});
+      // Con la ubicación real si la hay; sin GPS se envía solo el estado.
+      void sendStatus("AVAILABLE").catch(() => {});
     }, "Entrega confirmada.");
 
     if (ok) {

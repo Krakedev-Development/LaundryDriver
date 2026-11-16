@@ -24,10 +24,7 @@ import {
   pickupStatuses,
   type OperationalStatus,
 } from "../../domain/models";
-import {
-  driverOrdersService,
-  GUAYAQUIL_COORDINATES,
-} from "../../services/orders/driverOrdersService";
+import { useLiveLocation } from "../../features/driver/model/LiveLocationContext";
 import { tactile } from "../../design-system/interaction";
 
 const ALL_OPERATIONAL_STATUSES: OperationalStatus[] = [
@@ -89,6 +86,7 @@ const statusMeta: Record<
 
 export function DriverProfileScreen() {
   const { state, execute } = useApp();
+  const { sendStatus } = useLiveLocation();
   const d = state.driver;
   const [updating, setUpdating] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -106,11 +104,8 @@ export function DriverProfileScreen() {
     setUpdating(true);
     setFeedback(null);
     try {
-      await driverOrdersService.updateLocation({
-        latitude: d.currentLat || GUAYAQUIL_COORDINATES.center.latitude,
-        longitude: d.currentLng || GUAYAQUIL_COORDINATES.center.longitude,
-        status,
-      });
+      // Con la ubicación real si la hay; sin GPS se envía solo el estado.
+      await sendStatus(status);
       setFeedback(`Estado sincronizado: ${operationalLabels[status]}`);
     } catch {
       // Offline fallback
@@ -179,7 +174,10 @@ export function DriverProfileScreen() {
                   </View>
                   {active && (
                     <View
-                      style={[styles.activePill, { backgroundColor: meta.border }]}
+                      style={[
+                        styles.activePill,
+                        { backgroundColor: meta.border },
+                      ]}
                     >
                       <Text
                         style={[styles.activePillText, { color: meta.ink }]}
@@ -196,7 +194,11 @@ export function DriverProfileScreen() {
         </View>
         {feedback && (
           <View style={styles.feedbackContainer}>
-            <Icon name="information-circle-outline" size={14} color={contentColors.primary} />
+            <Icon
+              name="information-circle-outline"
+              size={14}
+              color={contentColors.primary}
+            />
             <Text style={styles.feedbackText}>{feedback}</Text>
           </View>
         )}

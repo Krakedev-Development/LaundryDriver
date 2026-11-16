@@ -106,11 +106,14 @@ export interface ListOrdersQuery {
   pageSize?: number;
 }
 
-export interface UpdateDriverLocationPayload {
-  latitude: number;
-  longitude: number;
-  status?: "AVAILABLE" | "ON_SERVICE" | "BREAK" | "OFFLINE";
-}
+// Coordenadas reales del GPS (las dos o ninguna) y/o estado. Sin GPS se envía solo el estado.
+export type UpdateDriverLocationPayload =
+  | {
+      latitude: number;
+      longitude: number;
+      status?: "AVAILABLE" | "ON_SERVICE" | "BREAK" | "OFFLINE";
+    }
+  | { latitude?: undefined; longitude?: undefined; status: "AVAILABLE" | "ON_SERVICE" | "BREAK" | "OFFLINE" };
 
 export interface BackendDriverProfile {
   id: string;

@@ -1,12 +1,15 @@
 import { View } from "react-native";
 import { Button, type IconName, useAction } from "../../../components/ui";
 import { useApp } from "../../../store/AppProvider";
+import { useLiveLocation } from "../model/LiveLocationContext";
+import { advanceOnServer, isServerAction } from "../model/serverTransitions";
 import { type Order } from "../../../domain/models";
 import { useLaundryNavigation } from "../../../navigation/useLaundryNavigation";
 import { driverOrdersService } from "../../../services/orders/driverOrdersService";
 
 export function DriverAction({ order }: { order: Order }) {
   const { execute, state } = useApp();
+  const { sendStatus } = useLiveLocation();
   const navigation = useLaundryNavigation();
   const feedbackAction = useAction();
   const actions: Partial<
@@ -65,6 +68,28 @@ export function DriverAction({ order }: { order: Order }) {
           busy={feedbackAction.busy}
           onPress={() => {
             void feedbackAction.asyncRun(async () => {
+              const step = action[1];
+              if (isServerAction(step)) {
+                // Primero el servidor: el teléfono solo avanza si el servidor lo registró.
+                if (
+                  ["BREAK", "OFFLINE"].includes(state.driver.operationalStatus)
+                )
+                  throw Error(
+                    "Ponte disponible antes de continuar el servicio.",
+                  );
+                const synced = await advanceOnServer(order, step, (latest) =>
+                  execute((r) => r.syncAssignedOrders([latest])),
+                );
+                execute((r) => {
+                  r.driverAction(order.id, step);
+                  r.syncAssignedOrders([synced]);
+                });
+                void sendStatus("ON_SERVICE").catch(() => {});
+                if (step === "START_PICKUP")
+                  navigation.navigate("DriverMap", { orderId: order.id });
+                return;
+              }
+              // Llegada a planta y salida a entrega requieren código de custodia (pendiente).
               if (action[1] === "ARRIVE_FACILITY") {
                 try {
                   const updated =
@@ -89,13 +114,8 @@ export function DriverAction({ order }: { order: Order }) {
               execute((r) => r.driverAction(order.id, action[1]));
               const nextStatus =
                 action[1] === "ARRIVE_FACILITY" ? "AVAILABLE" : "ON_SERVICE";
-              void driverOrdersService
-                .updateLocation({
-                  latitude: state.driver.currentLat || -2.1894,
-                  longitude: state.driver.currentLng || -79.8891,
-                  status: nextStatus,
-                })
-                .catch(() => {});
+              // Con la ubicación real si la hay; sin GPS se envía solo el estado.
+              void sendStatus(nextStatus).catch(() => {});
               if (["START_PICKUP", "START_DELIVERY"].includes(action[1])) {
                 navigation.navigate("DriverMap", { orderId: order.id });
               }

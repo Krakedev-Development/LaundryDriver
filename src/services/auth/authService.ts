@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { facilities } from "../../domain/catalog";
-import { apiClient } from "../api/apiClient";
+import { ApiError, apiClient, setSessionRefresher } from "../api/apiClient";
 
 export const ACCESS_TOKEN_KEY = "laundry.driver.auth.accessToken";
 export const REFRESH_TOKEN_KEY = "laundry.driver.auth.refreshToken";
@@ -362,7 +362,9 @@ export const authService = {
       };
       await saveAuthSession(session);
       return session;
-    } catch {
+    } catch (error) {
+      // Sin conexión la sesión se conserva: se reintenta cuando vuelva la señal.
+      if (error instanceof ApiError && error.statusCode === 0) throw error;
       await clearAuthSession();
       return null;
     }
@@ -384,3 +386,6 @@ export const authService = {
     await clearAuthSession();
   },
 };
+
+// El cliente de API renueva la sesión con este servicio cuando el servidor la rechaza.
+setSessionRefresher(async () => (await authService.refresh())?.tokens.accessToken ?? null);

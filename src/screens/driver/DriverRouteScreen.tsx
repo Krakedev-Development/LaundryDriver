@@ -9,11 +9,9 @@ import { deliveryStatuses, pickupStatuses } from "../../domain/models";
 import { useLaundryNavigation } from "../../navigation/useLaundryNavigation";
 import { routeStyles } from "../../components/DriverRoutePresentation";
 import { RouteAvailability } from "../../features/driver/ui/RouteAvailability";
+import { LocationNotice } from "../../features/driver/ui/LocationNotice";
 import { NextServiceCard } from "../../features/driver/ui/NextServiceCard";
-import {
-  driverOrdersService,
-  GUAYAQUIL_COORDINATES,
-} from "../../services/orders/driverOrdersService";
+import { driverOrdersService } from "../../services/orders/driverOrdersService";
 import { tactile } from "../../design-system/interaction";
 
 export function DriverRouteScreen() {
@@ -39,42 +37,7 @@ export function DriverRouteScreen() {
     void fetchAssignedRoute();
   }, [fetchAssignedRoute]);
 
-  // Telemetría GPS periódica hacia PATCH /drivers/me/location
-  useEffect(() => {
-    let active = true;
-    const emitLocation = async () => {
-      try {
-        const lat =
-          state.driver.currentLat || GUAYAQUIL_COORDINATES.center.latitude;
-        const lng =
-          state.driver.currentLng || GUAYAQUIL_COORDINATES.center.longitude;
-        await driverOrdersService.updateLocation({
-          latitude: lat,
-          longitude: lng,
-          status: state.driver.operationalStatus,
-        });
-      } catch {
-        // Telemetría en segundo plano no bloquea la UI
-      }
-    };
-
-    void emitLocation();
-
-    const interval = setInterval(() => {
-      if (active) {
-        void emitLocation();
-      }
-    }, 25000);
-
-    return () => {
-      active = false;
-      clearInterval(interval);
-    };
-  }, [
-    state.driver.currentLat,
-    state.driver.currentLng,
-    state.driver.operationalStatus,
-  ]);
+  // La ubicación real la envía LiveLocationProvider mientras haya sesión de chofer.
 
   const orders = visibleOrders(state).filter(
     (order) =>
@@ -86,6 +49,7 @@ export function DriverRouteScreen() {
 
   return (
     <Page>
+      <LocationNotice />
       <RouteAvailability orders={orders} />
       <View style={styles.sectionHeaderRow}>
         <Title style={routeStyles.section}>Siguiente servicio</Title>
@@ -128,7 +92,11 @@ export function DriverRouteScreen() {
       <View style={styles.timelineHeader}>
         <Title style={routeStyles.section}>Paradas de tu ruta</Title>
         <View style={styles.stopCountPill}>
-          <Icon name="git-branch-outline" size={13} color={contentColors.primary} />
+          <Icon
+            name="git-branch-outline"
+            size={13}
+            color={contentColors.primary}
+          />
           <Text style={styles.stopCountText}>
             {orders.length} {orders.length === 1 ? "parada" : "paradas"}
           </Text>

@@ -3,11 +3,13 @@ import type { Order } from "../../../domain/models";
 import { garmentCount } from "../../../domain/models";
 import { useAction } from "../../../components/ui";
 import { useApp } from "../../../store/AppProvider";
+import { useLiveLocation } from "./LiveLocationContext";
 import { useLaundryNavigation } from "../../../navigation/useLaundryNavigation";
 import { driverOrdersService } from "../../../services/orders/driverOrdersService";
 
 export function usePickupConfirmation(order: Order | undefined) {
-  const { execute, state } = useApp();
+  const { execute } = useApp();
+  const { sendStatus } = useLiveLocation();
   const navigation = useLaundryNavigation();
   const feedbackAction = useAction();
   const [checked, setChecked] = useState(false),
@@ -47,13 +49,8 @@ export function usePickupConfirmation(order: Order | undefined) {
         ),
       );
 
-      void driverOrdersService
-        .updateLocation({
-          latitude: state.driver.currentLat || -2.1894,
-          longitude: state.driver.currentLng || -79.8891,
-          status: "ON_SERVICE",
-        })
-        .catch(() => {});
+      // Con la ubicación real si la hay; sin GPS se envía solo el estado.
+      void sendStatus("ON_SERVICE").catch(() => {});
     }, "Recogida confirmada.");
 
     if (ok) {
@@ -87,13 +84,8 @@ export function usePickupConfirmation(order: Order | undefined) {
         r.driverAction(order.id, "ARRIVE_FACILITY");
       });
 
-      void driverOrdersService
-        .updateLocation({
-          latitude: state.driver.currentLat || -2.1894,
-          longitude: state.driver.currentLng || -79.8891,
-          status: "AVAILABLE",
-        })
-        .catch(() => {});
+      // Con la ubicación real si la hay; sin GPS se envía solo el estado.
+      void sendStatus("AVAILABLE").catch(() => {});
     }, "Llegada a planta registrada.");
 
     if (ok) {
