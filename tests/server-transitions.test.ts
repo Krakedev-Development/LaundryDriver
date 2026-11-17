@@ -89,7 +89,7 @@ test("si la versión no coincide se recarga la solicitud y se avisa, sin avanzar
       ? json(409, { message: "El pedido cambió; recárgalo e intenta de nuevo." })
       : json(200, order("HEADING_TO_PICKUP", 7)),
   );
-  let refreshed: { status: string; version: number } | undefined;
+  let refreshed: { status: string; version?: number } | undefined;
   await assert.rejects(
     advanceOnServer({ id: "o-1", status: "PICKUP_ASSIGNED", version: 3 }, "START_PICKUP", (latest) => {
       refreshed = latest;

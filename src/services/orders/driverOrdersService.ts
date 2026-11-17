@@ -106,6 +106,31 @@ export interface ListOrdersQuery {
   pageSize?: number;
 }
 
+export type HandoffType =
+  | "CUSTOMER_TO_DRIVER"
+  | "DRIVER_TO_FACILITY"
+  | "FACILITY_TO_DRIVER"
+  | "DRIVER_TO_CUSTOMER";
+
+export interface IssuedHandoff {
+  handoffId: string;
+  type: string;
+  code: string;
+  qrToken: string;
+  expiresAt: string;
+}
+
+// Exactamente uno: el código de 6 dígitos o el token leído del QR.
+export type VerifyHandoffPayload = {
+  type: HandoffType;
+  expectedVersion: number;
+  declaredCount?: number;
+  receivedCount?: number;
+  recipientName?: string;
+  recipientRelationship?: string;
+  notes?: string;
+} & ({ code: string; qrToken?: undefined } | { qrToken: string; code?: undefined });
+
 // Coordenadas reales del GPS (las dos o ninguna) y/o estado. Sin GPS se envía solo el estado.
 export type UpdateDriverLocationPayload =
   | {
@@ -471,6 +496,51 @@ export const driverOrdersService = {
       {
         accessToken: token,
       },
+    );
+  },
+
+  // Custodia: valida el código o QR que muestra quien entrega la ropa. Si es correcto, el
+  // servidor mueve la solicitud al estado siguiente (p. ej. ARRIVED_FOR_PICKUP -> PICKED_UP).
+  async verifyHandoff(
+    orderId: string,
+    payload: VerifyHandoffPayload,
+    explicitToken?: string | null,
+  ): Promise<BackendOrderDetails> {
+    const token = await resolveToken(explicitToken);
+    return await apiClient.post<BackendOrderDetails>(
+      `/orders/${orderId}/handoffs/verify`,
+      payload,
+      { accessToken: token },
+    );
+  },
+
+  // Custodia: el chofer genera el código que muestra a la sede (llegada a planta o salida a
+  // reparto). El servidor lo entrega solo esta vez; generar otro invalida el anterior.
+  async issueHandoff(
+    orderId: string,
+    type: "DRIVER_TO_FACILITY" | "FACILITY_TO_DRIVER",
+    explicitToken?: string | null,
+  ): Promise<IssuedHandoff> {
+    const token = await resolveToken(explicitToken);
+    return await apiClient.post<IssuedHandoff>(
+      `/orders/${orderId}/handoffs/issue`,
+      { type },
+      { accessToken: token },
+    );
+  },
+
+  // El chofer no pudo recoger: la solicitud queda retenida para la sede y se aplica el cargo.
+  async reportFailedPickup(
+    orderId: string,
+    expectedVersion: number,
+    reason: string,
+    explicitToken?: string | null,
+  ): Promise<BackendOrderDetails> {
+    const token = await resolveToken(explicitToken);
+    return await apiClient.post<BackendOrderDetails>(
+      `/orders/${orderId}/failed-pickup`,
+      { expectedVersion, reason },
+      { accessToken: token },
     );
   },
 
