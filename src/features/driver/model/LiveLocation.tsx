@@ -5,6 +5,7 @@ import type { OperationalStatus } from "../../../domain/models";
 import { driverOrdersService } from "../../../services/orders/driverOrdersService";
 import { useApp } from "../../../store/AppProvider";
 import {
+  DEMO_LOCATION_ENABLED,
   GUAYAQUIL_DEMO_COORDS,
   LiveLocationContext,
   type LocationStatus,
@@ -184,6 +185,9 @@ export function LiveLocationProvider({
   }, [start]);
 
   const reportGuayaquilDemo = useCallback(async () => {
+    // Solo en desarrollo (emuladores): en producción nunca se envía una ubicación inventada.
+    if (!DEMO_LOCATION_ENABLED)
+      throw Error("La ubicación de prueba solo está disponible en desarrollo.");
     const { latitude, longitude } = GUAYAQUIL_DEMO_COORDS;
     fix.current = { latitude, longitude };
     executeRef.current((repo) => repo.setDriverLocation(latitude, longitude));

@@ -428,3 +428,11 @@ test("en planta el chofer muestra su código y avanza cuando la sede lo valida",
   }, STATE_KEY);
   expect(status).toBe("AT_FACILITY");
 });
+
+test("en la app compilada no existe la ubicación de prueba en Guayaquil", async ({ page }) => {
+  // La app de los choferes no puede declarar una ubicación inventada (solo en desarrollo).
+  await expect(page.getByRole("button", { name: "Reportar ubicación en Guayaquil (Demo)" })).toHaveCount(0);
+  await page.getByRole("tab", { name: "Perfil", exact: true }).click();
+  await expect(page.getByText("Disponible", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Reportar ubicación en Guayaquil (Demo)" })).toHaveCount(0);
+});

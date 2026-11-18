@@ -12,6 +12,7 @@ import { RouteAvailability } from "../../features/driver/ui/RouteAvailability";
 import { LocationNotice } from "../../features/driver/ui/LocationNotice";
 import { NextServiceCard } from "../../features/driver/ui/NextServiceCard";
 import {
+  DEMO_LOCATION_ENABLED,
   isOutsideEcuador,
   useLiveLocation,
 } from "../../features/driver/model/LiveLocationContext";
@@ -60,7 +61,8 @@ export function DriverRouteScreen() {
   return (
     <Page>
       <LocationNotice />
-      {outsideEcuador ? (
+      {/* Solo en desarrollo: ayuda a probar en emuladores cuyo GPS está fuera de Ecuador. */}
+      {DEMO_LOCATION_ENABLED && outsideEcuador ? (
         <View style={styles.emulatorBanner}>
           <View style={styles.emulatorHeader}>
             <Icon name="locate-outline" size={16} color="#92400E" />

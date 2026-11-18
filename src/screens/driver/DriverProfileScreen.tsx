@@ -26,6 +26,7 @@ import {
   type OperationalStatus,
 } from "../../domain/models";
 import {
+  DEMO_LOCATION_ENABLED,
   GUAYAQUIL_DEMO_COORDS,
   isOutsideEcuador,
   useLiveLocation,
@@ -131,15 +132,12 @@ export function DriverProfileScreen() {
       setFeedback(
         `Ubicación de prueba reportada en Guayaquil (${GUAYAQUIL_DEMO_COORDS.latitude}, ${GUAYAQUIL_DEMO_COORDS.longitude})`,
       );
-    } catch {
-      execute((r) =>
-        r.setDriverLocation(
-          GUAYAQUIL_DEMO_COORDS.latitude,
-          GUAYAQUIL_DEMO_COORDS.longitude,
-        ),
-      );
+    } catch (error) {
+      // Si el servidor no la registró no se fija nada en el teléfono: no habría ubicación real.
       setFeedback(
-        `Ubicación local fijada en Guayaquil (${GUAYAQUIL_DEMO_COORDS.latitude}, ${GUAYAQUIL_DEMO_COORDS.longitude})`,
+        error instanceof Error
+          ? `No se pudo reportar la ubicación de prueba: ${error.message}`
+          : "No se pudo reportar la ubicación de prueba.",
       );
     } finally {
       setUpdating(false);
@@ -233,21 +231,24 @@ export function DriverProfileScreen() {
             <Text style={styles.feedbackText}>{feedback}</Text>
           </View>
         )}
-        <View style={styles.demoLocationBox}>
-          <Text style={styles.demoLocationMeta}>
-            {outsideEcuador
-              ? `GPS actual fuera de Ecuador (${d.currentLat.toFixed(4)}, ${d.currentLng.toFixed(4)}). Usa coordenadas de Guayaquil para pruebas en emulador.`
-              : `Ubicación reportada: (${d.currentLat.toFixed(4)}, ${d.currentLng.toFixed(4)})`}
-          </Text>
-          <Button
-            label="Reportar ubicación en Guayaquil (Demo)"
-            icon="locate-outline"
-            secondary
-            busy={updating}
-            haptic="medium"
-            onPress={() => void handleReportGuayaquilDemo()}
-          />
-        </View>
+        {/* Herramienta de prueba para emuladores: no existe en la app de los choferes. */}
+        {DEMO_LOCATION_ENABLED ? (
+          <View style={styles.demoLocationBox}>
+            <Text style={styles.demoLocationMeta}>
+              {outsideEcuador
+                ? `GPS actual fuera de Ecuador (${d.currentLat.toFixed(4)}, ${d.currentLng.toFixed(4)}). Usa coordenadas de Guayaquil para pruebas en emulador.`
+                : `Última ubicación en el teléfono: (${d.currentLat.toFixed(4)}, ${d.currentLng.toFixed(4)})`}
+            </Text>
+            <Button
+              label="Reportar ubicación en Guayaquil (Demo)"
+              icon="locate-outline"
+              secondary
+              busy={updating}
+              haptic="medium"
+              onPress={() => void handleReportGuayaquilDemo()}
+            />
+          </View>
+        ) : null}
       </ProfileSection>
 
       <ProfileSection title="Vehículo asignado">

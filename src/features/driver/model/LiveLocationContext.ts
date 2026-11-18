@@ -14,6 +14,12 @@ export type LocationStatus =
   | "disabled" // la ubicación del teléfono está apagada
   | "error";
 
+// La ubicación de prueba en Guayaquil sirve solo para emuladores durante el desarrollo. En la app
+// compilada para los choferes (__DEV__ falso) no se ofrece ni se envía: la asignación depende de
+// la ubicación real y un chofer no debe poder declararse en otro lugar.
+export const DEMO_LOCATION_ENABLED = __DEV__;
+const DEMO_DISABLED_MESSAGE = "La ubicación de prueba solo está disponible en desarrollo.";
+
 export const GUAYAQUIL_DEMO_COORDS = {
   latitude: -2.1894,
   longitude: -79.8891,
@@ -47,6 +53,7 @@ const fallback: LiveLocationValue = {
     await driverOrdersService.updateLocation({ status });
   },
   reportGuayaquilDemo: async () => {
+    if (!DEMO_LOCATION_ENABLED) throw Error(DEMO_DISABLED_MESSAGE);
     await driverOrdersService.updateLocation({
       latitude: -2.1894,
       longitude: -79.8891,
