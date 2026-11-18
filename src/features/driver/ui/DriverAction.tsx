@@ -1,12 +1,17 @@
 import { View } from "react-native";
 import { Button, type IconName, useAction } from "../../../components/ui";
 import { useApp } from "../../../store/AppProvider";
+import { useLiveLocation } from "../model/LiveLocationContext";
+import { advanceOnServer, isServerAction } from "../model/serverTransitions";
+import { FailedPickupAction } from "./FailedPickupAction";
+import { FacilityArrivalAction } from "./FacilityArrivalAction";
+import { DeliveryDispatchAction } from "./DeliveryDispatchAction";
 import { type Order } from "../../../domain/models";
 import { useLaundryNavigation } from "../../../navigation/useLaundryNavigation";
-import { driverOrdersService } from "../../../services/orders/driverOrdersService";
 
 export function DriverAction({ order }: { order: Order }) {
   const { execute, state } = useApp();
+  const { sendStatus } = useLiveLocation();
   const navigation = useLaundryNavigation();
   const feedbackAction = useAction();
   const actions: Partial<
@@ -37,16 +42,8 @@ export function DriverAction({ order }: { order: Order }) {
       "location-outline",
     ],
     PICKED_UP: ["Ir a planta central", "GO_FACILITY", "business-outline"],
-    HEADING_TO_FACILITY: [
-      "Confirmar entrega en planta",
-      "ARRIVE_FACILITY",
-      "checkmark-done-outline",
-    ],
-    DELIVERY_ASSIGNED: [
-      "Iniciar navegación de entrega",
-      "START_DELIVERY",
-      "navigate-outline",
-    ],
+    // En planta (HEADING_TO_FACILITY y DELIVERY_ASSIGNED) los traspasos se validan con código:
+    // ver FacilityArrivalAction y DeliveryDispatchAction.
     OUT_FOR_DELIVERY: [
       "Marcar llegada a entrega",
       "ARRIVE_DELIVERY",
@@ -65,53 +62,64 @@ export function DriverAction({ order }: { order: Order }) {
           busy={feedbackAction.busy}
           onPress={() => {
             void feedbackAction.asyncRun(async () => {
-              if (action[1] === "ARRIVE_FACILITY") {
-                try {
-                  const updated =
-                    await driverOrdersService.confirmFacilityArrival(
-                      order.id,
-                      order.version ?? 1,
-                      "Entrega en planta central confirmada",
-                    );
-                  if (updated?.version) {
-                    execute((r) =>
-                      r.updateOrderVersion(
-                        order.id,
-                        updated.version,
-                        "AT_FACILITY",
-                      ),
-                    );
-                  }
-                } catch {
-                  // Fallback for offline testing
-                }
+              const step = action[1];
+              if (isServerAction(step)) {
+                // Primero el servidor: el teléfono solo avanza si el servidor lo registró.
+                if (
+                  ["BREAK", "OFFLINE"].includes(state.driver.operationalStatus)
+                )
+                  throw Error(
+                    "Ponte disponible antes de continuar el servicio.",
+                  );
+                const synced = await advanceOnServer(order, step, (latest) =>
+                  execute((r) => r.syncAssignedOrders([latest])),
+                );
+                execute((r) => {
+                  r.driverAction(order.id, step);
+                  // Del servidor se toman el estado y la versión confirmados.
+                  r.updateOrderVersion(
+                    order.id,
+                    synced.version ?? (order.version ?? 1) + 1,
+                    synced.status,
+                  );
+                });
+                void sendStatus("ON_SERVICE").catch(() => {});
+                if (step === "START_PICKUP")
+                  navigation.navigate("DriverMap", { orderId: order.id });
+                return;
               }
-              execute((r) => r.driverAction(order.id, action[1]));
-              const nextStatus =
-                action[1] === "ARRIVE_FACILITY" ? "AVAILABLE" : "ON_SERVICE";
-              void driverOrdersService
-                .updateLocation({
-                  latitude: state.driver.currentLat || -2.1894,
-                  longitude: state.driver.currentLng || -79.8891,
-                  status: nextStatus,
-                })
-                .catch(() => {});
-              if (["START_PICKUP", "START_DELIVERY"].includes(action[1])) {
-                navigation.navigate("DriverMap", { orderId: order.id });
-              }
+              // Toda acción del chofer pasa por el servidor o por la custodia: nada avanza solo aquí.
+              throw Error("Esta acción no está disponible.");
             });
           }}
         />
       )}
       {order.status === "ARRIVED_FOR_PICKUP" && (
+        <>
+          <Button
+            label="Confirmar recogida de prendas"
+            icon="cube-outline"
+            haptic="medium"
+            onPress={() =>
+              navigation.navigate("DriverPickupConfirm", { orderId: order.id })
+            }
+          />
+          <FailedPickupAction order={order} />
+        </>
+      )}
+      {order.status === "DELIVERY_ASSIGNED" && (
+        <DeliveryDispatchAction order={order} />
+      )}
+      {order.status === "OUT_FOR_DELIVERY" && (
         <Button
-          label="Confirmar recogida de prendas"
-          icon="cube-outline"
-          haptic="medium"
-          onPress={() =>
-            navigation.navigate("DriverPickupConfirm", { orderId: order.id })
-          }
+          label="Abrir navegación"
+          icon="navigate-outline"
+          secondary
+          onPress={() => navigation.navigate("DriverMap", { orderId: order.id })}
         />
+      )}
+      {order.status === "HEADING_TO_FACILITY" && (
+        <FacilityArrivalAction order={order} />
       )}
       {order.status === "ARRIVED_FOR_DELIVERY" && (
         <Button

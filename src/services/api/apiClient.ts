@@ -17,9 +17,69 @@ export interface ApiRequestOptions extends Omit<RequestInit, "body"> {
   accessToken?: string | null;
 }
 
+// ---------------------------------------------------------------- Sesión
+// La sesión de acceso dura poco (15 min). Cuando el servidor la rechaza, se renueva una vez con
+// el token de renovación y se repite el pedido. El servicio de sesión registra cómo renovar
+// (así este módulo no depende de él). El renovador devuelve el nuevo token, null si el servidor
+// rechazó la renovación, o lanza un error si no hubo conexión.
+export const SESSION_EXPIRED_MESSAGE =
+  "Tu sesión expiró. Inicia sesión nuevamente.";
+type Refresher = () => Promise<string | null>;
+let refresher: Refresher | null = null;
+let refreshing: Promise<string | null> | null = null;
+const expiredListeners = new Set<() => void>();
+
+export function setSessionRefresher(fn: Refresher | null) {
+  refresher = fn;
+}
+
+/** Se llama cuando la sesión ya no se puede renovar; devuelve la función para dejar de escuchar. */
+export function onSessionExpired(listener: () => void) {
+  expiredListeners.add(listener);
+  return () => {
+    expiredListeners.delete(listener);
+  };
+}
+
+// Varios pedidos que fallan a la vez comparten una sola renovación.
+function renewSession(): Promise<string | null> {
+  if (!refresher) return Promise.resolve(null);
+  refreshing ??= refresher().finally(() => {
+    refreshing = null;
+  });
+  return refreshing;
+}
+
+const isAuthEndpoint = (endpoint: string) => /^\/auth\//.test(endpoint);
+
 export async function apiRequest<T>(
   endpoint: string,
   options: ApiRequestOptions = {},
+): Promise<T> {
+  try {
+    return await sendRequest<T>(endpoint, options);
+  } catch (error) {
+    const normalized = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+    if (
+      !(error instanceof ApiError) ||
+      error.statusCode !== 401 ||
+      !options.accessToken ||
+      isAuthEndpoint(normalized)
+    )
+      throw error;
+    // Si no hay conexión durante la renovación, se propaga ese error sin cerrar la sesión.
+    const renewed = await renewSession();
+    if (!renewed) {
+      expiredListeners.forEach((listener) => listener());
+      throw new ApiError(SESSION_EXPIRED_MESSAGE, 401, error.details);
+    }
+    return await sendRequest<T>(endpoint, { ...options, accessToken: renewed });
+  }
+}
+
+async function sendRequest<T>(
+  endpoint: string,
+  options: ApiRequestOptions,
 ): Promise<T> {
   const { body, accessToken, headers, ...rest } = options;
   const normalizedEndpoint = endpoint.startsWith("/")
@@ -42,11 +102,7 @@ export async function apiRequest<T>(
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch (error) {
-    throw new ApiError(
-      "No se pudo conectar con el servidor.",
-      0,
-      error,
-    );
+    throw new ApiError("No se pudo conectar con el servidor.", 0, error);
   }
 
   const text = await response.text();
@@ -60,9 +116,10 @@ export async function apiRequest<T>(
   }
 
   if (!response.ok) {
-    const payload = parsed as
-      | { message?: string | string[]; error?: string }
-      | null;
+    const payload = parsed as {
+      message?: string | string[];
+      error?: string;
+    } | null;
     const rawMessage = payload?.message;
     const message = Array.isArray(rawMessage)
       ? rawMessage[0]

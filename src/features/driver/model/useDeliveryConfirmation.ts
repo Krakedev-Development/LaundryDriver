@@ -2,11 +2,13 @@ import { useState } from "react";
 import type { Order } from "../../../domain/models";
 import { useAction } from "../../../components/ui";
 import { useApp } from "../../../store/AppProvider";
+import { useLiveLocation } from "./LiveLocationContext";
 import { useLaundryNavigation } from "../../../navigation/useLaundryNavigation";
-import { driverOrdersService } from "../../../services/orders/driverOrdersService";
+import { parseCustodyInput, verifyCustody } from "./custody";
 
 export function useDeliveryConfirmation(order: Order | undefined) {
-  const { execute, state } = useApp();
+  const { execute } = useApp();
+  const { sendStatus } = useLiveLocation();
   const navigation = useLaundryNavigation();
   const feedbackAction = useAction();
   const [name, setName] = useState(order?.customerName ?? ""),
@@ -19,39 +21,34 @@ export function useDeliveryConfirmation(order: Order | undefined) {
   const confirm = async () => {
     if (!order) return;
     const ok = await feedbackAction.asyncRun(async () => {
-      try {
-        const updated = await driverOrdersService.confirmDelivery(
-          order.id,
-          order.version ?? 1,
-          notes.trim() || `Entregado a ${name.trim()} (${relationship})`,
-        );
-        if (updated?.version) {
-          execute((r) =>
-            r.updateOrderVersion(order.id, updated.version, "DELIVERED"),
-          );
-        }
-      } catch {
-        // Fallback for offline testing
-      }
-
-      execute((r) =>
-        r.driverConfirmDelivery(
-          order.id,
-          name,
-          relationship,
-          notes,
-          photo,
-          code.trim() || undefined,
-        ),
+      // Quien recibe es obligatorio y la entrega se valida en el servidor con el código o QR
+      // que muestra el cliente en su app.
+      if (!name.trim()) throw Error("Escribe el nombre de quien recibe.");
+      if (!relationship.trim()) throw Error("Indica la relación de quien recibe con el cliente.");
+      const input = parseCustodyInput(code, order.id, "DRIVER_TO_CUSTOMER");
+      const updated = await verifyCustody(
+        order,
+        "DRIVER_TO_CUSTOMER",
+        input,
+        {
+          recipientName: name.trim(),
+          recipientRelationship: relationship.trim(),
+          notes: notes.trim() || undefined,
+        },
+        (latest) => execute((r) => r.syncAssignedOrders([latest])),
       );
+      execute((r) => {
+        // El código ya lo validó el servidor: el registro local no lo vuelve a comprobar.
+        r.driverConfirmDelivery(order.id, name, relationship, notes, photo);
+        r.updateOrderVersion(
+          order.id,
+          updated.version ?? (order.version ?? 1) + 1,
+          "DELIVERED",
+        );
+      });
 
-      void driverOrdersService
-        .updateLocation({
-          latitude: state.driver.currentLat || -2.1894,
-          longitude: state.driver.currentLng || -79.8891,
-          status: "AVAILABLE",
-        })
-        .catch(() => {});
+      // Con la ubicación real si la hay; sin GPS se envía solo el estado.
+      void sendStatus("AVAILABLE").catch(() => {});
     }, "Entrega confirmada.");
 
     if (ok) {

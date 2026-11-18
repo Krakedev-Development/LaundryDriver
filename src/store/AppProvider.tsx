@@ -19,6 +19,10 @@ import {
   clearAuthSession,
   getStoredAuthSession,
 } from "../services/auth/authService";
+import {
+  onSessionExpired,
+  SESSION_EXPIRED_MESSAGE,
+} from "../services/api/apiClient";
 import { PersistenceQueue } from "./persistence";
 
 interface Context {
@@ -28,13 +32,17 @@ interface Context {
   execute<T>(action: (repo: LaundryRepository) => T): T;
   reset(): void;
   retry(): void;
+  /** Aviso para la pantalla de ingreso, p. ej. cuando la sesión venció y no se pudo renovar. */
+  sessionNotice: string | null;
+  clearSessionNotice(): void;
 }
 const AppContext = createContext<Context | null>(null);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState(initializeState);
   const latest = useRef(state);
   const [ready, setReady] = useState(false),
-    [error, setError] = useState<string | null>(null);
+    [error, setError] = useState<string | null>(null),
+    [sessionNotice, setSessionNotice] = useState<string | null>(null);
   const queue = useRef(new PersistenceQueue(AsyncStorage)).current;
   const mounted = useRef(true);
   const save = (next: AppState) => {
@@ -101,6 +109,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     save(next.state);
     return next.result;
   };
+  // Si la sesión venció y no se pudo renovar, se vuelve al ingreso con un aviso en lugar de
+  // seguir mostrando al chofer como disponible mientras el servidor rechaza todo.
+  useEffect(
+    () =>
+      onSessionExpired(() => {
+        if (!mounted.current || !latest.current.session) return;
+        execute((repo) => repo.logout());
+        setSessionNotice(SESSION_EXPIRED_MESSAGE);
+      }),
+    [],
+  );
   return (
     <AppContext.Provider
       value={{
@@ -108,6 +127,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ready,
         error,
         execute,
+        sessionNotice,
+        clearSessionNotice: () => setSessionNotice(null),
         reset: () => {
           void clearAuthSession();
           save(initializeState());

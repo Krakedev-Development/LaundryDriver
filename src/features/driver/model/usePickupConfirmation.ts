@@ -3,11 +3,14 @@ import type { Order } from "../../../domain/models";
 import { garmentCount } from "../../../domain/models";
 import { useAction } from "../../../components/ui";
 import { useApp } from "../../../store/AppProvider";
+import { useLiveLocation } from "./LiveLocationContext";
+import { parseCustodyInput, verifyCustody } from "./custody";
+import { advanceOnServer } from "./serverTransitions";
 import { useLaundryNavigation } from "../../../navigation/useLaundryNavigation";
-import { driverOrdersService } from "../../../services/orders/driverOrdersService";
 
 export function usePickupConfirmation(order: Order | undefined) {
   const { execute, state } = useApp();
+  const { sendStatus } = useLiveLocation();
   const navigation = useLaundryNavigation();
   const feedbackAction = useAction();
   const [checked, setChecked] = useState(false),
@@ -22,38 +25,34 @@ export function usePickupConfirmation(order: Order | undefined) {
   const confirm = async () => {
     if (!order) return;
     const ok = await feedbackAction.asyncRun(async () => {
-      try {
-        const updated = await driverOrdersService.confirmPickup(
-          order.id,
-          order.version ?? 1,
-          notes.trim() || `${count} prendas recogidas`,
-        );
-        if (updated?.version) {
-          execute((r) =>
-            r.updateOrderVersion(order.id, updated.version, "PICKED_UP"),
-          );
-        }
-      } catch {
-        // Fallback for offline testing
-      }
-
-      execute((r) =>
-        r.driverConfirmPickup(
-          order.id,
-          Number(count),
-          notes,
-          photo,
-          code.trim() || undefined,
-        ),
+      // La custodia se valida en el servidor con el código o QR del cliente; la cantidad de
+      // prendas recibidas es obligatoria y queda registrada en el traspaso.
+      const declared = Number(count);
+      if (!Number.isSafeInteger(declared) || declared <= 0)
+        throw Error("Ingresa cuántas prendas recibes.");
+      const input = parseCustodyInput(code, order.id, "CUSTOMER_TO_DRIVER");
+      const updated = await verifyCustody(
+        order,
+        "CUSTOMER_TO_DRIVER",
+        input,
+        {
+          declaredCount: declared,
+          notes: notes.trim() || undefined,
+        },
+        (latest) => execute((r) => r.syncAssignedOrders([latest])),
       );
+      execute((r) => {
+        // El código ya lo validó el servidor: el registro local no lo vuelve a comprobar.
+        r.driverConfirmPickup(order.id, declared, notes, photo);
+        r.updateOrderVersion(
+          order.id,
+          updated.version ?? (order.version ?? 1) + 1,
+          "PICKED_UP",
+        );
+      });
 
-      void driverOrdersService
-        .updateLocation({
-          latitude: state.driver.currentLat || -2.1894,
-          longitude: state.driver.currentLng || -79.8891,
-          status: "ON_SERVICE",
-        })
-        .catch(() => {});
+      // Con la ubicación real si la hay; sin GPS se envía solo el estado.
+      void sendStatus("ON_SERVICE").catch(() => {});
     }, "Recogida confirmada.");
 
     if (ok) {
@@ -61,40 +60,27 @@ export function usePickupConfirmation(order: Order | undefined) {
     }
   };
 
-  const markFacilityArrival = async () => {
+  // Tras recoger, el chofer sale hacia la planta: se registra en el servidor. Al llegar, la
+  // entrega se valida con su código desde la ruta ("Mostrar código para la sede").
+  const startFacilityTrip = async () => {
     if (!order) return;
     const ok = await feedbackAction.asyncRun(async () => {
-      try {
-        const updated = await driverOrdersService.confirmFacilityArrival(
-          order.id,
-          (order.version ?? 1) + 1,
-          "Llegada a planta central confirmada",
+      const current = state.orders.find((o) => o.id === order.id) ?? order;
+      if (current.status === "PICKED_UP") {
+        const synced = await advanceOnServer(current, "GO_FACILITY", (latest) =>
+          execute((r) => r.syncAssignedOrders([latest])),
         );
-        if (updated?.version) {
-          execute((r) =>
-            r.updateOrderVersion(order.id, updated.version, "AT_FACILITY"),
-          );
-        }
-      } catch {
-        // Fallback for offline testing
-      }
-
-      execute((r) => {
-        const currentOrder = r.state.orders.find((o) => o.id === order.id);
-        if (currentOrder?.status === "PICKED_UP") {
+        execute((r) => {
           r.driverAction(order.id, "GO_FACILITY");
-        }
-        r.driverAction(order.id, "ARRIVE_FACILITY");
-      });
-
-      void driverOrdersService
-        .updateLocation({
-          latitude: state.driver.currentLat || -2.1894,
-          longitude: state.driver.currentLng || -79.8891,
-          status: "AVAILABLE",
-        })
-        .catch(() => {});
-    }, "Llegada a planta registrada.");
+          r.updateOrderVersion(
+            order.id,
+            synced.version ?? (current.version ?? 1) + 1,
+            synced.status,
+          );
+        });
+      }
+      void sendStatus("ON_SERVICE").catch(() => {});
+    }, "En camino a planta.");
 
     if (ok) {
       navigation.popTo("DriverRoute");
@@ -113,7 +99,7 @@ export function usePickupConfirmation(order: Order | undefined) {
     code,
     setCode,
     confirm,
-    markFacilityArrival,
+    startFacilityTrip,
     pickedUpConfirmed,
     busy: feedbackAction.busy,
     feedback: feedbackAction.feedback,

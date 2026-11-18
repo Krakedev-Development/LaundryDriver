@@ -11,6 +11,7 @@ import {
 import {
   Badge,
   Body,
+  Button,
   Icon,
   Title,
   contentColors,
@@ -25,9 +26,11 @@ import {
   type OperationalStatus,
 } from "../../domain/models";
 import {
-  driverOrdersService,
-  GUAYAQUIL_COORDINATES,
-} from "../../services/orders/driverOrdersService";
+  DEMO_LOCATION_ENABLED,
+  GUAYAQUIL_DEMO_COORDS,
+  isOutsideEcuador,
+  useLiveLocation,
+} from "../../features/driver/model/LiveLocationContext";
 import { tactile } from "../../design-system/interaction";
 
 const ALL_OPERATIONAL_STATUSES: OperationalStatus[] = [
@@ -89,9 +92,11 @@ const statusMeta: Record<
 
 export function DriverProfileScreen() {
   const { state, execute } = useApp();
+  const { sendStatus, reportGuayaquilDemo } = useLiveLocation();
   const d = state.driver;
   const [updating, setUpdating] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const outsideEcuador = isOutsideEcuador(d.currentLat, d.currentLng);
 
   const activeRouteCount = visibleOrders(state).filter(
     (order) =>
@@ -106,15 +111,34 @@ export function DriverProfileScreen() {
     setUpdating(true);
     setFeedback(null);
     try {
-      await driverOrdersService.updateLocation({
-        latitude: d.currentLat || GUAYAQUIL_COORDINATES.center.latitude,
-        longitude: d.currentLng || GUAYAQUIL_COORDINATES.center.longitude,
-        status,
-      });
+      // Con la ubicación real si la hay; sin GPS se envía solo el estado.
+      await sendStatus(status);
       setFeedback(`Estado sincronizado: ${operationalLabels[status]}`);
     } catch {
       // Offline fallback
       setFeedback(`Estado local: ${operationalLabels[status]}`);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleReportGuayaquilDemo = async () => {
+    if (updating) return;
+    tactile("medium");
+    setUpdating(true);
+    setFeedback(null);
+    try {
+      await reportGuayaquilDemo();
+      setFeedback(
+        `Ubicación de prueba reportada en Guayaquil (${GUAYAQUIL_DEMO_COORDS.latitude}, ${GUAYAQUIL_DEMO_COORDS.longitude})`,
+      );
+    } catch (error) {
+      // Si el servidor no la registró no se fija nada en el teléfono: no habría ubicación real.
+      setFeedback(
+        error instanceof Error
+          ? `No se pudo reportar la ubicación de prueba: ${error.message}`
+          : "No se pudo reportar la ubicación de prueba.",
+      );
     } finally {
       setUpdating(false);
     }
@@ -179,7 +203,10 @@ export function DriverProfileScreen() {
                   </View>
                   {active && (
                     <View
-                      style={[styles.activePill, { backgroundColor: meta.border }]}
+                      style={[
+                        styles.activePill,
+                        { backgroundColor: meta.border },
+                      ]}
                     >
                       <Text
                         style={[styles.activePillText, { color: meta.ink }]}
@@ -196,10 +223,32 @@ export function DriverProfileScreen() {
         </View>
         {feedback && (
           <View style={styles.feedbackContainer}>
-            <Icon name="information-circle-outline" size={14} color={contentColors.primary} />
+            <Icon
+              name="information-circle-outline"
+              size={14}
+              color={contentColors.primary}
+            />
             <Text style={styles.feedbackText}>{feedback}</Text>
           </View>
         )}
+        {/* Herramienta de prueba para emuladores: no existe en la app de los choferes. */}
+        {DEMO_LOCATION_ENABLED ? (
+          <View style={styles.demoLocationBox}>
+            <Text style={styles.demoLocationMeta}>
+              {outsideEcuador
+                ? `GPS actual fuera de Ecuador (${d.currentLat.toFixed(4)}, ${d.currentLng.toFixed(4)}). Usa coordenadas de Guayaquil para pruebas en emulador.`
+                : `Última ubicación en el teléfono: (${d.currentLat.toFixed(4)}, ${d.currentLng.toFixed(4)})`}
+            </Text>
+            <Button
+              label="Reportar ubicación en Guayaquil (Demo)"
+              icon="locate-outline"
+              secondary
+              busy={updating}
+              haptic="medium"
+              onPress={() => void handleReportGuayaquilDemo()}
+            />
+          </View>
+        ) : null}
       </ProfileSection>
 
       <ProfileSection title="Vehículo asignado">
@@ -325,6 +374,19 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: contentColors.primary,
     fontWeight: "600",
+  },
+  demoLocationBox: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
+    gap: 8,
+  },
+  demoLocationMeta: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: "#64748B",
+    fontWeight: "500",
   },
   summaryBox: {
     flexDirection: "row",

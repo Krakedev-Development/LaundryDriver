@@ -18,10 +18,7 @@ import {
 } from "../../../domain/models";
 import { routeStyles } from "../../../components/DriverRoutePresentation";
 import { tactile } from "../../../design-system/interaction";
-import {
-  driverOrdersService,
-  GUAYAQUIL_COORDINATES,
-} from "../../../services/orders/driverOrdersService";
+import { useLiveLocation } from "../model/LiveLocationContext";
 
 const statusTheme: Record<
   OperationalStatus,
@@ -67,6 +64,7 @@ const quickStatuses: OperationalStatus[] = ["AVAILABLE", "ON_SERVICE", "BREAK"];
 
 export function RouteAvailability({ orders }: { orders: Order[] }) {
   const { state, execute } = useApp();
+  const { sendStatus } = useLiveLocation();
   const driver = state.driver;
   const [statusPanel, setStatusPanel] = useState(false);
   const currentMeta = statusTheme[driver.operationalStatus];
@@ -74,13 +72,8 @@ export function RouteAvailability({ orders }: { orders: Order[] }) {
   const handleSelectStatus = (status: OperationalStatus) => {
     tactile("medium");
     execute((r) => r.setDriverOperationalStatus(status));
-    void driverOrdersService
-      .updateLocation({
-        latitude: driver.currentLat || GUAYAQUIL_COORDINATES.center.latitude,
-        longitude: driver.currentLng || GUAYAQUIL_COORDINATES.center.longitude,
-        status,
-      })
-      .catch(() => {});
+    // Con la ubicación real si la hay; sin GPS se envía solo el estado.
+    void sendStatus(status).catch(() => {});
   };
 
   return (

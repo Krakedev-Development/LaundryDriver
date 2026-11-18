@@ -8,6 +8,7 @@ import { BootstrapState } from "../components/BootstrapState";
 import { driverScreens } from "./DriverScreens";
 import { LoginScreen } from "../screens/auth/LoginScreen";
 import { PasswordScreen } from "../screens/auth/PasswordScreen";
+import { LiveLocationProvider } from "../features/driver/model/LiveLocation";
 function ForcedPasswordScreen() {
   return <PasswordScreen forced />;
 }
@@ -30,27 +31,30 @@ export function AppNavigation() {
         : "DriverTabs";
   return (
     <NavigationContainer key={session?.id + "-" + flow}>
-      <OverlayProvider>
-        <Stack.Navigator
-          initialRouteName={initial}
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: colors.background },
-            animation: reduced ? "none" : "fade",
-          }}
-        >
-          {flow === "auth" ? (
-            <Stack.Screen name="Login" component={LoginScreen} />
-          ) : flow === "password" ? (
-            <Stack.Screen
-              name="DriverChangePassword"
-              component={ForcedPasswordScreen}
-            />
-          ) : (
-            driverScreens()
-          )}
-        </Stack.Navigator>
-      </OverlayProvider>
+      {/* Con sesión de chofer se sigue y envía su ubicación real, en cualquier pantalla. */}
+      <LiveLocationProvider enabled={flow === "driver"}>
+        <OverlayProvider>
+          <Stack.Navigator
+            initialRouteName={initial}
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.background },
+              animation: reduced ? "none" : "fade",
+            }}
+          >
+            {flow === "auth" ? (
+              <Stack.Screen name="Login" component={LoginScreen} />
+            ) : flow === "password" ? (
+              <Stack.Screen
+                name="DriverChangePassword"
+                component={ForcedPasswordScreen}
+              />
+            ) : (
+              driverScreens()
+            )}
+          </Stack.Navigator>
+        </OverlayProvider>
+      </LiveLocationProvider>
     </NavigationContainer>
   );
 }

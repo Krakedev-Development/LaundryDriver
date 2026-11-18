@@ -1,18 +1,8 @@
-import type { Leg } from "../domain/models";
-
 export const GUAYAQUIL_BASE = {
   latitude: -2.1894,
   longitude: -79.8891,
 } as const;
 
-export const MAP_MODE_STORAGE_KEY = "laundry.driver-map-theme-mode.v1";
-
-export const OSM_TILE_URLS = {
-  tactical: "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-  light: "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
-} as const;
-
-export type MapThemeMode = keyof typeof OSM_TILE_URLS;
 export type StopKind = "PICKUP" | "DELIVERY" | "FACILITY";
 
 /** Normalizes legacy placeholder coordinates around Guayaquil base (-2.1894, -79.8891). */
@@ -56,16 +46,6 @@ export function normalizeGuayaquilCoords(
   return { origin: normOrigin, destination: normDest };
 }
 
-export function computeHeadingDegrees(
-  origin: { latitude: number; longitude: number },
-  destination: { latitude: number; longitude: number },
-): number {
-  const dy = destination.latitude - origin.latitude;
-  const dx = destination.longitude - origin.longitude;
-  const angle = (Math.atan2(dx, dy) * 180) / Math.PI;
-  return Math.round((angle + 360) % 360);
-}
-
 export function stopKindMeta(kind: StopKind) {
   if (kind === "PICKUP") {
     return {
@@ -93,13 +73,3 @@ export function stopKindMeta(kind: StopKind) {
     icon: "checkmark-done-circle" as const,
   };
 }
-
-export interface RouteMapProps {
-  height?: number;
-  origin: { latitude: number; longitude: number };
-  destination: Pick<Leg, "latitude" | "longitude" | "addressFull">;
-  stopKind?: StopKind;
-  speedKmh?: number;
-  statusLabel?: string;
-}
-

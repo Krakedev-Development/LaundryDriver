@@ -48,7 +48,13 @@
           "recordAudioAndroid": false
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Laundry Driver usa tu ubicación mientras la app está abierta para que administración te asigne recogidas y entregas cercanas."
+        }
+      ]
     ]
   }
 }

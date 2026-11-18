@@ -47,12 +47,12 @@ export function DriverPickupConfirmScreen({
           {isCustodyHeld ? (
             <View style={{ gap: 10 }}>
               <Button
-                label="Confirmar llegada a planta"
+                label="Ir a planta central"
                 icon="business-outline"
                 haptic="medium"
                 busy={form.busy}
                 style={driverServiceStyles.primary}
-                onPress={() => void form.markFacilityArrival()}
+                onPress={() => void form.startFacilityTrip()}
               />
               <Button
                 label="Volver a mi ruta"

@@ -1,6 +1,5 @@
-import { useEffect } from "react";
 import { StatusChip } from "../components/presentation";
-import { Platform, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { Page } from "../components/Page";
 import {
   Badge,
@@ -13,7 +12,6 @@ import {
   contentColors,
   useAction,
 } from "../components/ui";
-import RouteMap from "../components/RouteMap";
 import {
   GUAYAQUIL_BASE,
   normalizeGuayaquilCoords,
@@ -26,7 +24,6 @@ import { pickupStatuses, type Order } from "../domain/models";
 import { facilities } from "../domain/catalog";
 import type { ScreenProps } from "../navigation/routes";
 import { useLaundryNavigation } from "../navigation/useLaundryNavigation";
-import { driverOrdersService } from "../services/orders/driverOrdersService";
 import {
   openGoogleMapsDirections,
   openWazeDirections,
@@ -45,7 +42,8 @@ function destinationFor(order: Order): {
     return {
       latitude: f?.latitude ?? GUAYAQUIL_BASE.latitude,
       longitude: f?.longitude ?? GUAYAQUIL_BASE.longitude,
-      addressFull: f?.address ?? (order.facilityName || "Planta Central Guayaquil"),
+      addressFull:
+        f?.address ?? (order.facilityName || "Planta Central Guayaquil"),
       stopKind: "FACILITY",
     };
   }
@@ -67,8 +65,8 @@ export function DriverMapScreen({ route }: ScreenProps<"DriverMap">) {
   const navigation = useLaundryNavigation();
   const { state } = useApp();
   const o = visibleOrders(state).find((o) => o.id === route.params.orderId);
-  const a = useAction(),
-    { height } = useWindowDimensions();
+  // El chofer navega con Google Maps o Waze: la app no muestra un mapa propio.
+  const a = useAction();
   if (!o)
     return (
       <Page>
@@ -82,20 +80,6 @@ export function DriverMapScreen({ route }: ScreenProps<"DriverMap">) {
     destination,
   );
   const meta = stopKindMeta(destination.stopKind);
-
-  useEffect(() => {
-    void driverOrdersService
-      .updateLocation({
-        latitude: normalized.origin.latitude,
-        longitude: normalized.origin.longitude,
-        status: d.operationalStatus,
-      })
-      .catch(() => {});
-  }, [
-    normalized.origin.latitude,
-    normalized.origin.longitude,
-    d.operationalStatus,
-  ]);
 
   return (
     <Page>
@@ -117,7 +101,11 @@ export function DriverMapScreen({ route }: ScreenProps<"DriverMap">) {
         </View>
 
         <View style={styles.addressBox}>
-          <Icon name="location-outline" size={18} color={contentColors.primary} />
+          <Icon
+            name="location-outline"
+            size={18}
+            color={contentColors.primary}
+          />
           <View style={{ flex: 1, gap: 2 }}>
             <Body style={styles.addressText}>{destination.addressFull}</Body>
             <Text style={styles.coordsText}>
@@ -179,28 +167,11 @@ export function DriverMapScreen({ route }: ScreenProps<"DriverMap">) {
           onPress={() => navigation.navigate("Chat", { orderId: o.id })}
         />
       </Card>
-      {Platform.OS === "web" ? (
-        <Card style={styles.mapCard}>
-          <RouteMap
-            height={Math.max(260, Math.min(430, height * 0.46))}
-            origin={normalized.origin}
-            destination={{ ...destination, ...normalized.destination }}
-            stopKind={destination.stopKind}
-            speedKmh={34}
-            statusLabel="EN RUTA"
-          />
-        </Card>
-      ) : null}
     </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  mapCard: {
-    padding: 0,
-    overflow: "hidden",
-    borderRadius: 16,
-  },
   telemetryCard: {
     gap: 12,
     borderRadius: 16,
