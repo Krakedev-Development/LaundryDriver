@@ -11,13 +11,23 @@ import { routeStyles } from "../../components/DriverRoutePresentation";
 import { RouteAvailability } from "../../features/driver/ui/RouteAvailability";
 import { LocationNotice } from "../../features/driver/ui/LocationNotice";
 import { NextServiceCard } from "../../features/driver/ui/NextServiceCard";
+import {
+  isOutsideEcuador,
+  useLiveLocation,
+} from "../../features/driver/model/LiveLocationContext";
 import { driverOrdersService } from "../../services/orders/driverOrdersService";
 import { tactile } from "../../design-system/interaction";
 
 export function DriverRouteScreen() {
   const navigation = useLaundryNavigation();
   const { state, execute } = useApp();
+  const { reportGuayaquilDemo } = useLiveLocation();
   const [syncing, setSyncing] = useState(false);
+  const [reportingDemo, setReportingDemo] = useState(false);
+  const outsideEcuador = isOutsideEcuador(
+    state.driver.currentLat,
+    state.driver.currentLng,
+  );
 
   const fetchAssignedRoute = useCallback(async () => {
     try {
@@ -50,6 +60,31 @@ export function DriverRouteScreen() {
   return (
     <Page>
       <LocationNotice />
+      {outsideEcuador ? (
+        <View style={styles.emulatorBanner}>
+          <View style={styles.emulatorHeader}>
+            <Icon name="locate-outline" size={16} color="#92400E" />
+            <Text style={styles.emulatorText}>
+              GPS detectado fuera de Ecuador (
+              {state.driver.currentLat.toFixed(2)},{" "}
+              {state.driver.currentLng.toFixed(2)}).
+            </Text>
+          </View>
+          <Button
+            label="Reportar ubicación en Guayaquil (Demo)"
+            icon="locate-outline"
+            secondary
+            busy={reportingDemo}
+            haptic="medium"
+            onPress={() => {
+              setReportingDemo(true);
+              void reportGuayaquilDemo()
+                .catch(() => {})
+                .finally(() => setReportingDemo(false));
+            }}
+          />
+        </View>
+      ) : null}
       <RouteAvailability orders={orders} />
       <View style={styles.sectionHeaderRow}>
         <Title style={routeStyles.section}>Siguiente servicio</Title>
@@ -255,5 +290,25 @@ const styles = StyleSheet.create({
   timelineContent: {
     flex: 1,
     paddingBottom: 16,
+  },
+  emulatorBanner: {
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: "#FFFBEB",
+    borderWidth: 1,
+    borderColor: "#FCD34D",
+    gap: 8,
+  },
+  emulatorHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  emulatorText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "600",
+    color: "#92400E",
   },
 });

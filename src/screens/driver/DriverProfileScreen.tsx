@@ -11,6 +11,7 @@ import {
 import {
   Badge,
   Body,
+  Button,
   Icon,
   Title,
   contentColors,
@@ -24,7 +25,11 @@ import {
   pickupStatuses,
   type OperationalStatus,
 } from "../../domain/models";
-import { useLiveLocation } from "../../features/driver/model/LiveLocationContext";
+import {
+  GUAYAQUIL_DEMO_COORDS,
+  isOutsideEcuador,
+  useLiveLocation,
+} from "../../features/driver/model/LiveLocationContext";
 import { tactile } from "../../design-system/interaction";
 
 const ALL_OPERATIONAL_STATUSES: OperationalStatus[] = [
@@ -86,10 +91,11 @@ const statusMeta: Record<
 
 export function DriverProfileScreen() {
   const { state, execute } = useApp();
-  const { sendStatus } = useLiveLocation();
+  const { sendStatus, reportGuayaquilDemo } = useLiveLocation();
   const d = state.driver;
   const [updating, setUpdating] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const outsideEcuador = isOutsideEcuador(d.currentLat, d.currentLng);
 
   const activeRouteCount = visibleOrders(state).filter(
     (order) =>
@@ -110,6 +116,31 @@ export function DriverProfileScreen() {
     } catch {
       // Offline fallback
       setFeedback(`Estado local: ${operationalLabels[status]}`);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleReportGuayaquilDemo = async () => {
+    if (updating) return;
+    tactile("medium");
+    setUpdating(true);
+    setFeedback(null);
+    try {
+      await reportGuayaquilDemo();
+      setFeedback(
+        `Ubicación de prueba reportada en Guayaquil (${GUAYAQUIL_DEMO_COORDS.latitude}, ${GUAYAQUIL_DEMO_COORDS.longitude})`,
+      );
+    } catch {
+      execute((r) =>
+        r.setDriverLocation(
+          GUAYAQUIL_DEMO_COORDS.latitude,
+          GUAYAQUIL_DEMO_COORDS.longitude,
+        ),
+      );
+      setFeedback(
+        `Ubicación local fijada en Guayaquil (${GUAYAQUIL_DEMO_COORDS.latitude}, ${GUAYAQUIL_DEMO_COORDS.longitude})`,
+      );
     } finally {
       setUpdating(false);
     }
@@ -202,6 +233,21 @@ export function DriverProfileScreen() {
             <Text style={styles.feedbackText}>{feedback}</Text>
           </View>
         )}
+        <View style={styles.demoLocationBox}>
+          <Text style={styles.demoLocationMeta}>
+            {outsideEcuador
+              ? `GPS actual fuera de Ecuador (${d.currentLat.toFixed(4)}, ${d.currentLng.toFixed(4)}). Usa coordenadas de Guayaquil para pruebas en emulador.`
+              : `Ubicación reportada: (${d.currentLat.toFixed(4)}, ${d.currentLng.toFixed(4)})`}
+          </Text>
+          <Button
+            label="Reportar ubicación en Guayaquil (Demo)"
+            icon="locate-outline"
+            secondary
+            busy={updating}
+            haptic="medium"
+            onPress={() => void handleReportGuayaquilDemo()}
+          />
+        </View>
       </ProfileSection>
 
       <ProfileSection title="Vehículo asignado">
@@ -327,6 +373,19 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: contentColors.primary,
     fontWeight: "600",
+  },
+  demoLocationBox: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
+    gap: 8,
+  },
+  demoLocationMeta: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: "#64748B",
+    fontWeight: "500",
   },
   summaryBox: {
     flexDirection: "row",

@@ -5,6 +5,7 @@ import type { OperationalStatus } from "../../../domain/models";
 import { driverOrdersService } from "../../../services/orders/driverOrdersService";
 import { useApp } from "../../../store/AppProvider";
 import {
+  GUAYAQUIL_DEMO_COORDS,
   LiveLocationContext,
   type LocationStatus,
 } from "./LiveLocationContext";
@@ -36,6 +37,7 @@ export function LiveLocationProvider({
   const operational = useRef(state.driver.operationalStatus);
   operational.current = state.driver.operationalStatus;
   const subscription = useRef<Location.LocationSubscription | null>(null);
+  const startRunId = useRef(0);
   const statusRef = useRef(status);
   statusRef.current = status;
   const executeRef = useRef(execute);
@@ -57,7 +59,20 @@ export function LiveLocationProvider({
     });
   }, []);
 
+  const applyPosition = useCallback(
+    (latitude: number, longitude: number, forceSend = false) => {
+      fix.current = { latitude, longitude };
+      executeRef.current((repo) => repo.setDriverLocation(latitude, longitude));
+      if (statusRef.current !== "granted") setStatus("granted");
+      if (forceSend || Date.now() - lastSentAt.current >= MIN_SEND_GAP_MS) {
+        void send().catch(() => {});
+      }
+    },
+    [send],
+  );
+
   const stop = useCallback(() => {
+    startRunId.current += 1;
     subscription.current?.remove();
     subscription.current = null;
   }, []);
@@ -65,19 +80,22 @@ export function LiveLocationProvider({
   const start = useCallback(
     async (ask: boolean) => {
       stop();
+      const runId = startRunId.current;
       setStatus("requesting");
       try {
         if (!(await Location.hasServicesEnabledAsync())) {
-          setStatus("disabled");
+          if (startRunId.current === runId) setStatus("disabled");
           return;
         }
         const permission = ask
           ? await Location.requestForegroundPermissionsAsync()
           : await Location.getForegroundPermissionsAsync();
+        if (startRunId.current !== runId) return;
         if (permission.status !== "granted") {
           setStatus(permission.canAskAgain ? "denied" : "blocked");
           return;
         }
+
         subscription.current = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.Balanced,
@@ -85,21 +103,41 @@ export function LiveLocationProvider({
             distanceInterval: 20,
           },
           (position) => {
-            const { latitude, longitude } = position.coords;
-            fix.current = { latitude, longitude };
-            executeRef.current((repo) =>
-              repo.setDriverLocation(latitude, longitude),
+            if (startRunId.current !== runId) return;
+            applyPosition(
+              position.coords.latitude,
+              position.coords.longitude,
             );
-            if (statusRef.current !== "granted") setStatus("granted");
-            if (Date.now() - lastSentAt.current >= MIN_SEND_GAP_MS)
-              void send().catch(() => {});
           },
         );
+
+        let initialPosition: Location.LocationObject | null = null;
+        try {
+          initialPosition = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+        } catch {
+          initialPosition = null;
+        }
+        if (!initialPosition) {
+          try {
+            initialPosition = await Location.getLastKnownPositionAsync();
+          } catch {
+            initialPosition = null;
+          }
+        }
+        if (startRunId.current === runId && initialPosition) {
+          applyPosition(
+            initialPosition.coords.latitude,
+            initialPosition.coords.longitude,
+            true,
+          );
+        }
       } catch {
-        setStatus("error");
+        if (startRunId.current === runId) setStatus("error");
       }
     },
-    [send, stop],
+    [applyPosition, stop],
   );
 
   // Al iniciar sesión se pide el permiso; al cerrarla se deja de seguir la posición.
@@ -145,9 +183,27 @@ export function LiveLocationProvider({
     await start(true);
   }, [start]);
 
+  const reportGuayaquilDemo = useCallback(async () => {
+    const { latitude, longitude } = GUAYAQUIL_DEMO_COORDS;
+    fix.current = { latitude, longitude };
+    executeRef.current((repo) => repo.setDriverLocation(latitude, longitude));
+    setStatus("granted");
+    lastSentAt.current = Date.now();
+    await driverOrdersService.updateLocation({
+      latitude,
+      longitude,
+      status: operational.current,
+    });
+  }, []);
+
   return (
     <LiveLocationContext.Provider
-      value={{ status, activate, sendStatus: (s) => send(s) }}
+      value={{
+        status,
+        activate,
+        sendStatus: (s) => send(s),
+        reportGuayaquilDemo,
+      }}
     >
       {children}
     </LiveLocationContext.Provider>
