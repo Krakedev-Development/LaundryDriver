@@ -6,7 +6,11 @@ import {
   type Order,
   type OrderStatus,
 } from "./models";
+import { terminalStatuses } from "./models/statuses";
 import { PlantOperations } from "./operations/PlantOperations";
+
+// Los pedidos que vienen del servidor tienen id UUID; los de prueba no.
+const SERVER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import { clone, refreshSchedule } from "./state";
 import {
   authService,
@@ -221,6 +225,25 @@ export class LaundryRepository extends PlantOperations {
         this.state.orders.unshift(syncedOrder);
       }
     }
+  }
+
+  /** Quita un pedido que ya no es del chofer (la sede lo liberó o el cliente reprogramó). */
+  removeOrder(orderId: string): void {
+    this.state.orders = this.state.orders.filter((o) => o.id !== orderId);
+  }
+
+  /**
+   * Tras leer la lista completa del servidor, quita los pedidos del servidor que siguen abiertos
+   * en el teléfono pero ya no están asignados al chofer. Los de prueba (sin UUID) no se tocan.
+   */
+  pruneUnassignedOrders(serverIds: readonly string[]): void {
+    const keep = new Set(serverIds);
+    this.state.orders = this.state.orders.filter(
+      (o) =>
+        keep.has(o.id) ||
+        !SERVER_ID.test(o.id) ||
+        terminalStatuses.includes(o.status),
+    );
   }
 
   updateOrderVersion(

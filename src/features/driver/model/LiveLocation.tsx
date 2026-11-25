@@ -25,6 +25,7 @@ import {
   syncBackgroundTracking,
 } from "./backgroundLocation";
 import { backgroundProfileFor } from "./backgroundLocationPolicy";
+import { useOrderStatusSync } from "./orderStatusSync";
 
 // Ubicación real del chofer: filtrada por precisión y velocidad plausible (estilo AnubisRide),
 // enviada en tiempo real por WebSocket y con respaldo REST automático si el socket cae.
@@ -55,6 +56,9 @@ export function LiveLocationProvider({
 }) {
   const { state, execute } = useApp();
   const [status, setStatus] = useState<LocationStatus>("idle");
+  // Comparte la conexión del socket: los pedidos cancelados, liberados o reprogramados se
+  // actualizan en la lista del chofer al momento.
+  useOrderStatusSync(enabled);
   const fix = useRef<Fix | null>(null);
   const lastSentFix = useRef<Fix | null>(null);
   const lastSentAt = useRef(0);
