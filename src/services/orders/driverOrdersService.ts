@@ -136,9 +136,11 @@ export type UpdateDriverLocationPayload =
   | {
       latitude: number;
       longitude: number;
+      heading?: number;
+      speed?: number;
       status?: "AVAILABLE" | "ON_SERVICE" | "BREAK" | "OFFLINE";
     }
-  | { latitude?: undefined; longitude?: undefined; status: "AVAILABLE" | "ON_SERVICE" | "BREAK" | "OFFLINE" };
+  | { latitude?: undefined; longitude?: undefined; heading?: undefined; speed?: undefined; status: "AVAILABLE" | "ON_SERVICE" | "BREAK" | "OFFLINE" };
 
 export interface BackendDriverProfile {
   id: string;

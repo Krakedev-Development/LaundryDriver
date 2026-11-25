@@ -3,7 +3,14 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AppState as Lifecycle, Linking } from "react-native";
 import type { OperationalStatus } from "../../../domain/models";
 import { driverOrdersService } from "../../../services/orders/driverOrdersService";
+import { driverSocketService } from "../../../services/realtime/driverSocketService";
 import { useApp } from "../../../store/AppProvider";
+import {
+  evaluateDriverGpsFix,
+  shouldPushDriverLocation,
+  type AcceptedGpsFix,
+  type PendingRecalibration,
+} from "./gpsFilter";
 import {
   DEMO_LOCATION_ENABLED,
   GUAYAQUIL_DEMO_COORDS,
@@ -11,17 +18,24 @@ import {
   type LocationStatus,
 } from "./LiveLocationContext";
 
-// Ubicación real del chofer. Administración la usa para decidir quién puede atender una
-// solicitud y quién llega antes, así que nunca se inventa: sin GPS solo se envía el estado.
+// Ubicación real del chofer: filtrada por precisión y velocidad plausible (estilo AnubisRide),
+// enviada en tiempo real por WebSocket y con respaldo REST automático si el socket cae.
 
-// La web descarta ubicaciones de más de 2 minutos: se reenvía la última posición cada 25 s,
-// porque el teléfono deja de informar posiciones cuando el chofer está detenido.
 const HEARTBEAT_MS = 25_000;
-const MIN_SEND_GAP_MS = 10_000;
+const LIVE_TRACKED_STATUSES = new Set([
+  "PICKUP_ASSIGNED",
+  "HEADING_TO_PICKUP",
+  "ARRIVED_FOR_PICKUP",
+  "DELIVERY_ASSIGNED",
+  "OUT_FOR_DELIVERY",
+  "ARRIVED_FOR_DELIVERY",
+]);
 
 interface Fix {
   latitude: number;
   longitude: number;
+  heading?: number;
+  speed?: number;
 }
 
 export function LiveLocationProvider({
@@ -34,9 +48,20 @@ export function LiveLocationProvider({
   const { state, execute } = useApp();
   const [status, setStatus] = useState<LocationStatus>("idle");
   const fix = useRef<Fix | null>(null);
+  const lastSentFix = useRef<Fix | null>(null);
   const lastSentAt = useRef(0);
+  const lastAcceptedGps = useRef<AcceptedGpsFix | null>(null);
+  const acceptedFixCount = useRef(0);
+  const pendingRecalibration = useRef<PendingRecalibration | null>(null);
+
   const operational = useRef(state.driver.operationalStatus);
   operational.current = state.driver.operationalStatus;
+
+  const activeTrackedOrderId =
+    state.orders.find((o) => LIVE_TRACKED_STATUSES.has(o.status))?.id ?? null;
+  const activeOrderIdRef = useRef<string | null>(activeTrackedOrderId);
+  activeOrderIdRef.current = activeTrackedOrderId;
+
   const subscription = useRef<Location.LocationSubscription | null>(null);
   const startRunId = useRef(0);
   const statusRef = useRef(status);
@@ -48,24 +73,86 @@ export function LiveLocationProvider({
     const current = fix.current;
     const opStatus = override ?? operational.current;
     if (!current) {
-      if (override)
+      if (override) {
         await driverOrdersService.updateLocation({ status: opStatus });
+      }
       return;
     }
+
     lastSentAt.current = Date.now();
-    await driverOrdersService.updateLocation({
-      latitude: current.latitude,
-      longitude: current.longitude,
-      status: opStatus,
-    });
+    lastSentFix.current = current;
+
+    const sentViaWs =
+      !override &&
+      driverSocketService.updateLocation({
+        lat: current.latitude,
+        lng: current.longitude,
+        heading: current.heading,
+        speed: current.speed,
+        orderId: activeOrderIdRef.current ?? undefined,
+      });
+
+    if (!sentViaWs) {
+      await driverOrdersService.updateLocation({
+        latitude: current.latitude,
+        longitude: current.longitude,
+        heading: current.heading,
+        speed: current.speed,
+        status: opStatus,
+      });
+    }
   }, []);
 
   const applyPosition = useCallback(
-    (latitude: number, longitude: number, forceSend = false) => {
-      fix.current = { latitude, longitude };
+    (
+      latitude: number,
+      longitude: number,
+      meta: { heading?: number; speed?: number; accuracy?: number } = {},
+      forceSend = false,
+    ) => {
+      const now = Date.now();
+      if (!forceSend) {
+        const decision = evaluateDriverGpsFix(
+          {
+            latitude,
+            longitude,
+            accuracy: meta.accuracy,
+            heading: meta.heading,
+            speed: meta.speed,
+            timestamp: now,
+          },
+          lastAcceptedGps.current,
+          acceptedFixCount.current,
+          pendingRecalibration.current,
+        );
+        pendingRecalibration.current = decision.nextPending;
+        if (!decision.accept) return;
+      }
+
+      lastAcceptedGps.current = { latitude, longitude, timestamp: now };
+      acceptedFixCount.current += 1;
+
+      const nextFix: Fix = {
+        latitude,
+        longitude,
+        heading: meta.heading,
+        speed: meta.speed,
+      };
+      fix.current = nextFix;
       executeRef.current((repo) => repo.setDriverLocation(latitude, longitude));
       if (statusRef.current !== "granted") setStatus("granted");
-      if (forceSend || Date.now() - lastSentAt.current >= MIN_SEND_GAP_MS) {
+
+      const shouldSend = shouldPushDriverLocation(
+        nextFix,
+        lastSentFix.current,
+        lastSentAt.current,
+        {
+          force: forceSend,
+          hasActiveOrder: activeOrderIdRef.current !== null,
+          now,
+        },
+      );
+      if (shouldSend) {
         void send().catch(() => {});
       }
     },
@@ -82,7 +169,11 @@ export function LiveLocationProvider({
     async (ask: boolean) => {
       stop();
       const runId = startRunId.current;
+      lastAcceptedGps.current = null;
+      acceptedFixCount.current = 0;
+      pendingRecalibration.current = null;
       setStatus("requesting");
+
       try {
         if (!(await Location.hasServicesEnabledAsync())) {
           if (startRunId.current === runId) setStatus("disabled");
@@ -99,23 +190,30 @@ export function LiveLocationProvider({
 
         subscription.current = await Location.watchPositionAsync(
           {
-            accuracy: Location.Accuracy.Balanced,
-            timeInterval: 15_000,
-            distanceInterval: 20,
+            accuracy: Location.Accuracy.BestForNavigation,
+            timeInterval: 2_000,
+            distanceInterval: 3,
           },
           (position) => {
             if (startRunId.current !== runId) return;
-            applyPosition(
-              position.coords.latitude,
-              position.coords.longitude,
-            );
+            applyPosition(position.coords.latitude, position.coords.longitude, {
+              heading:
+                position.coords.heading != null && position.coords.heading >= 0
+                  ? position.coords.heading
+                  : undefined,
+              speed:
+                position.coords.speed != null && position.coords.speed >= 0
+                  ? position.coords.speed
+                  : undefined,
+              accuracy: position.coords.accuracy ?? undefined,
+            });
           },
         );
 
         let initialPosition: Location.LocationObject | null = null;
         try {
           initialPosition = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced,
+            accuracy: Location.Accuracy.High,
           });
         } catch {
           initialPosition = null;
@@ -131,6 +229,19 @@ export function LiveLocationProvider({
           applyPosition(
             initialPosition.coords.latitude,
             initialPosition.coords.longitude,
+            {
+              heading:
+                initialPosition.coords.heading != null &&
+                initialPosition.coords.heading >= 0
+                  ? initialPosition.coords.heading
+                  : undefined,
+              speed:
+                initialPosition.coords.speed != null &&
+                initialPosition.coords.speed >= 0
+                  ? initialPosition.coords.speed
+                  : undefined,
+              accuracy: initialPosition.coords.accuracy ?? undefined,
+            },
             true,
           );
         }
@@ -141,19 +252,25 @@ export function LiveLocationProvider({
     [applyPosition, stop],
   );
 
-  // Al iniciar sesión se pide el permiso; al cerrarla se deja de seguir la posición.
+  // Conexión WebSocket + seguimiento GPS mientras el chofer tiene sesión activa.
   useEffect(() => {
     if (!enabled) {
       stop();
+      driverSocketService.disconnect();
       fix.current = null;
+      lastSentFix.current = null;
       setStatus("idle");
       return;
     }
+    void driverSocketService.connect();
     void start(true);
-    return stop;
+    return () => {
+      stop();
+      driverSocketService.disconnect();
+    };
   }, [enabled, start, stop]);
 
-  // Reenvío periódico de la última posición real.
+  // Reenvío periódico de la última posición real (mantiene frescura cuando el chofer está detenido).
   useEffect(() => {
     if (!enabled) return;
     const timer = setInterval(() => {
@@ -162,16 +279,21 @@ export function LiveLocationProvider({
     return () => clearInterval(timer);
   }, [enabled, send]);
 
-  // Al volver a la app se revisa de nuevo: el chofer pudo activar la ubicación en los ajustes.
+  // Al volver a la app se revisa la conexión WebSocket y el permiso GPS.
   useEffect(() => {
     if (!enabled) return;
     const listener = Lifecycle.addEventListener("change", (next) => {
       if (next !== "active") return;
+      if (!driverSocketService.connected) {
+        void driverSocketService.connect();
+      }
       if (
         ["denied", "blocked", "disabled", "error"].includes(statusRef.current)
-      )
+      ) {
         void start(false);
-      else if (fix.current) void send().catch(() => {});
+      } else if (fix.current) {
+        void send().catch(() => {});
+      }
     });
     return () => listener.remove();
   }, [enabled, start, send]);
@@ -185,14 +307,20 @@ export function LiveLocationProvider({
   }, [start]);
 
   const reportGuayaquilDemo = useCallback(async () => {
-    // Solo en desarrollo (emuladores): en producción nunca se envía una ubicación inventada.
-    if (!DEMO_LOCATION_ENABLED)
+    if (!DEMO_LOCATION_ENABLED) {
       throw Error("La ubicación de prueba solo está disponible en desarrollo.");
+    }
     const { latitude, longitude } = GUAYAQUIL_DEMO_COORDS;
     fix.current = { latitude, longitude };
+    lastSentFix.current = { latitude, longitude };
     executeRef.current((repo) => repo.setDriverLocation(latitude, longitude));
     setStatus("granted");
     lastSentAt.current = Date.now();
+    driverSocketService.updateLocation({
+      lat: latitude,
+      lng: longitude,
+      orderId: activeOrderIdRef.current ?? undefined,
+    });
     await driverOrdersService.updateLocation({
       latitude,
       longitude,
