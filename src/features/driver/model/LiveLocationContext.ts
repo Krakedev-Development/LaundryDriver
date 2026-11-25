@@ -33,8 +33,18 @@ export function isOutsideEcuador(latitude: number, longitude: number): boolean {
   );
 }
 
+/** Ubicación con la pantalla bloqueada o con otra app encima (Google Maps, Waze). */
+export type BackgroundLocationStatus =
+  | "idle" // sin ubicación en primer plano todavía
+  | "unsupported" // web o Expo Go: solo hay seguimiento con la app abierta
+  | "needs_permission" // falta el permiso "Permitir siempre"
+  | "ready";
+
 export interface LiveLocationValue {
   status: LocationStatus;
+  background: BackgroundLocationStatus;
+  /** Pide "Permitir siempre" (o abre los ajustes) y arranca el seguimiento en segundo plano. */
+  enableBackground(): Promise<void>;
   /** Pide el permiso otra vez o abre los ajustes si quedó bloqueado. */
   activate(): Promise<void>;
   /** Envía el estado operativo junto con la ubicación real, si la hay. */
@@ -48,6 +58,8 @@ export const LiveLocationContext = createContext<LiveLocationValue | null>(null)
 // Sin proveedor la pantalla no se rompe: el estado se sigue enviando, sin ubicación.
 const fallback: LiveLocationValue = {
   status: "idle",
+  background: "idle",
+  enableBackground: async () => {},
   activate: async () => {},
   sendStatus: async (status) => {
     await driverOrdersService.updateLocation({ status });
