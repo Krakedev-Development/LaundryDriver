@@ -27,9 +27,11 @@ export function DriverServicesScreen() {
     try {
       setSyncing(true);
       const assigned = await driverOrdersService.getAssignedOrders();
-      if (assigned.length > 0) {
-        execute((repo) => repo.syncAssignedOrders(assigned));
-      }
+      // También quita los que ya no le pertenecen (liberados o reprogramados).
+      execute((repo) => {
+        repo.syncAssignedOrders(assigned);
+        repo.pruneUnassignedOrders(assigned.map((o) => o.id));
+      });
     } catch {
       // Fallback for offline sessions
     } finally {

@@ -52,7 +52,11 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Laundry Driver usa tu ubicación mientras la app está abierta para que administración te asigne recogidas y entregas cercanas."
+          "locationWhenInUsePermission": "Laundry Driver usa tu ubicación mientras la app está abierta para que administración te asigne recogidas y entregas cercanas.",
+          "locationAlwaysAndWhenInUsePermission": "Laundry Driver usa tu ubicación también con la pantalla bloqueada o mientras navegas con otra app, para que el cliente y administración te sigan durante la recogida o la entrega.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ]
     ]

@@ -33,7 +33,29 @@ const COPY: Partial<
 };
 
 export function LocationNotice() {
-  const { status, activate } = useLiveLocation();
+  const { status, activate, background, enableBackground } = useLiveLocation();
+  if (status === "granted" && background === "needs_permission")
+    return (
+      <Card
+        style={{ borderColor: "#FCD34D", backgroundColor: "#FFFBEB", gap: 8 }}
+      >
+        <View
+          testID="background_location_notice"
+          accessibilityRole="alert"
+          style={{ gap: 4 }}
+        >
+          <Title>Permite la ubicación "siempre"</Title>
+          <Body>
+            Así el cliente y administración te siguen viendo con la pantalla bloqueada o mientras
+            navegas con Google Maps o Waze. Solo se usa mientras estás disponible o en un servicio.
+          </Body>
+        </View>
+        <Button
+          label="Permitir siempre"
+          onPress={() => void enableBackground()}
+        />
+      </Card>
+    );
   if (status === "requesting")
     return (
       <View testID="location_notice" accessibilityLiveRegion="polite">

@@ -15,8 +15,17 @@ import {
   DEMO_LOCATION_ENABLED,
   GUAYAQUIL_DEMO_COORDS,
   LiveLocationContext,
+  type BackgroundLocationStatus,
   type LocationStatus,
 } from "./LiveLocationContext";
+import {
+  requestBackgroundPermission,
+  setBackgroundTrackedOrder,
+  stopBackgroundTracking,
+  syncBackgroundTracking,
+} from "./backgroundLocation";
+import { backgroundProfileFor } from "./backgroundLocationPolicy";
+import { useOrderStatusSync } from "./orderStatusSync";
 
 // Ubicación real del chofer: filtrada por precisión y velocidad plausible (estilo AnubisRide),
 // enviada en tiempo real por WebSocket y con respaldo REST automático si el socket cae.
@@ -47,6 +56,9 @@ export function LiveLocationProvider({
 }) {
   const { state, execute } = useApp();
   const [status, setStatus] = useState<LocationStatus>("idle");
+  // Comparte la conexión del socket: los pedidos cancelados, liberados o reprogramados se
+  // actualizan en la lista del chofer al momento.
+  useOrderStatusSync(enabled);
   const fix = useRef<Fix | null>(null);
   const lastSentFix = useRef<Fix | null>(null);
   const lastSentAt = useRef(0);
@@ -61,6 +73,8 @@ export function LiveLocationProvider({
     state.orders.find((o) => LIVE_TRACKED_STATUSES.has(o.status))?.id ?? null;
   const activeOrderIdRef = useRef<string | null>(activeTrackedOrderId);
   activeOrderIdRef.current = activeTrackedOrderId;
+  setBackgroundTrackedOrder(activeTrackedOrderId);
+  const [background, setBackground] = useState<BackgroundLocationStatus>("idle");
 
   const subscription = useRef<Location.LocationSubscription | null>(null);
   const startRunId = useRef(0);
@@ -298,6 +312,48 @@ export function LiveLocationProvider({
     return () => listener.remove();
   }, [enabled, start, send]);
 
+  // Segundo plano: corre solo con la ubicación de primer plano activa y según el perfil de
+  // ahorro de batería (navegación con tramo en curso, espera si está disponible, apagado si no).
+  const operationalStatus = state.driver.operationalStatus;
+  const hasActiveTrackedOrder = activeTrackedOrderId !== null;
+  const syncBackground = useCallback(async () => {
+    const profile =
+      enabled && statusRef.current === "granted"
+        ? backgroundProfileFor(operational.current, activeOrderIdRef.current !== null)
+        : null;
+    try {
+      const result = await syncBackgroundTracking(profile);
+      setBackground(statusRef.current === "granted" ? result : "idle");
+    } catch {
+      setBackground("unsupported");
+    }
+  }, [enabled]);
+
+  useEffect(() => {
+    if (!enabled) {
+      void stopBackgroundTracking();
+      setBackground("idle");
+      return;
+    }
+    void syncBackground();
+  }, [enabled, status, operationalStatus, hasActiveTrackedOrder, syncBackground]);
+
+  // Al volver de los ajustes del teléfono se revisa si ya concedió "Permitir siempre".
+  useEffect(() => {
+    if (!enabled) return;
+    const listener = Lifecycle.addEventListener("change", (next) => {
+      if (next === "active") void syncBackground();
+    });
+    return () => listener.remove();
+  }, [enabled, syncBackground]);
+
+  const enableBackground = useCallback(async () => {
+    const result = await requestBackgroundPermission();
+    // Si el sistema ya no muestra el diálogo, el permiso se cambia en los ajustes.
+    if (result === "needs_permission") await Linking.openSettings();
+    await syncBackground();
+  }, [syncBackground]);
+
   const activate = useCallback(async () => {
     if (statusRef.current === "blocked") {
       await Linking.openSettings();
@@ -332,6 +388,8 @@ export function LiveLocationProvider({
     <LiveLocationContext.Provider
       value={{
         status,
+        background,
+        enableBackground,
         activate,
         sendStatus: (s) => send(s),
         reportGuayaquilDemo,
