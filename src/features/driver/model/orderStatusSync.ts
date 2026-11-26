@@ -24,7 +24,26 @@ export function useOrderStatusSync(enabled: boolean): void {
         onRemove: (id) => executeRef.current((repo) => repo.removeOrder(id)),
       });
     };
+    // Cada (re)conexión autenticada relee los pedidos asignados: mientras no había conexión se
+    // pudieron perder avisos (asignaciones nuevas, cancelaciones, liberaciones).
+    const resync = () => {
+      void driverOrdersService
+        .getAssignedOrders()
+        .then((assigned) =>
+          executeRef.current((repo) => {
+            repo.syncAssignedOrders(assigned);
+            repo.pruneUnassignedOrders(assigned.map((o) => o.id));
+          }),
+        )
+        .catch(() => {
+          // Sin conexión se conserva lo último conocido.
+        });
+    };
     driverSocketService.on("order:status:changed", listener);
-    return () => driverSocketService.off("order:status:changed", listener);
+    driverSocketService.on("authenticated", resync);
+    return () => {
+      driverSocketService.off("order:status:changed", listener);
+      driverSocketService.off("authenticated", resync);
+    };
   }, [enabled]);
 }

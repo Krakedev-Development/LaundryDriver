@@ -42,7 +42,7 @@ export function onSessionExpired(listener: () => void) {
 }
 
 // Varios pedidos que fallan a la vez comparten una sola renovación.
-function renewSession(): Promise<string | null> {
+export function renewSession(): Promise<string | null> {
   if (!refresher) return Promise.resolve(null);
   refreshing ??= refresher().finally(() => {
     refreshing = null;
