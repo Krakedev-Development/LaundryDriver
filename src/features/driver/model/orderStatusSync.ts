@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { AppState as Lifecycle } from "react-native";
 import { driverOrdersService } from "../../../services/orders/driverOrdersService";
 import { driverSocketService } from "../../../services/realtime/driverSocketService";
 import { useApp } from "../../../store/AppProvider";
@@ -27,12 +28,13 @@ export function useOrderStatusSync(enabled: boolean): void {
     // Cada (re)conexión autenticada relee los pedidos asignados: mientras no había conexión se
     // pudieron perder avisos (asignaciones nuevas, cancelaciones, liberaciones).
     const resync = () => {
+      const fetchedAt = Date.now();
       void driverOrdersService
         .getAssignedOrders()
         .then((assigned) =>
           executeRef.current((repo) => {
             repo.syncAssignedOrders(assigned);
-            repo.pruneUnassignedOrders(assigned.map((o) => o.id));
+            repo.pruneUnassignedOrders(assigned.map((o) => o.id), fetchedAt);
           }),
         )
         .catch(() => {
@@ -41,7 +43,13 @@ export function useOrderStatusSync(enabled: boolean): void {
     };
     driverSocketService.on("order:status:changed", listener);
     driverSocketService.on("authenticated", resync);
+    // Al volver a la app (o a la pestaña) se relee aunque el socket figure conectado: una conexión
+    // que quedó colgada en segundo plano puede tardar hasta un minuto en detectarse como caída.
+    const lifecycle = Lifecycle.addEventListener("change", (status) => {
+      if (status === "active" && driverSocketService.connected) resync();
+    });
     return () => {
+      lifecycle.remove();
       driverSocketService.off("order:status:changed", listener);
       driverSocketService.off("authenticated", resync);
     };

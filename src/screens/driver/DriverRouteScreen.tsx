@@ -33,11 +33,12 @@ export function DriverRouteScreen() {
   const fetchAssignedRoute = useCallback(async () => {
     try {
       setSyncing(true);
+      const fetchedAt = Date.now();
       const assigned = await driverOrdersService.getAssignedOrders();
       // También quita los que ya no le pertenecen (liberados o reprogramados).
       execute((repo) => {
         repo.syncAssignedOrders(assigned);
-        repo.pruneUnassignedOrders(assigned.map((o) => o.id));
+        repo.pruneUnassignedOrders(assigned.map((o) => o.id), fetchedAt);
       });
     } catch {
       // Fallback for offline sessions
@@ -114,16 +115,6 @@ export function DriverRouteScreen() {
       {next ? (
         <View style={styles.nextContainer}>
           <NextServiceCard order={next} />
-          <Button
-            label="Abrir mapa táctico en Guayaquil"
-            icon="map-outline"
-            haptic="medium"
-            style={styles.mapActionBtn}
-            textStyle={styles.mapActionText}
-            onPress={() =>
-              navigation.navigate("DriverMap", { orderId: next.id })
-            }
-          />
         </View>
       ) : (
         <Empty text="No hay paradas activas asignadas. Consulta los próximos servicios." />
@@ -215,18 +206,6 @@ const styles = StyleSheet.create({
   },
   nextContainer: {
     gap: 12,
-  },
-  mapActionBtn: {
-    backgroundColor: "#0F172A",
-    borderWidth: 1,
-    borderColor: "#334155",
-    borderRadius: 14,
-    paddingVertical: 14,
-  },
-  mapActionText: {
-    color: "#F8FAFC",
-    fontWeight: "700",
-    fontSize: 14,
   },
   timelineHeader: {
     flexDirection: "row",

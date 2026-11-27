@@ -9,9 +9,11 @@ import {
   mapBackendOrderToDomain,
   type IssuedHandoff,
 } from "../../../services/orders/driverOrdersService";
+import { driverSocketService } from "../../../services/realtime/driverSocketService";
 import { QR_PREFIX } from "../model/custody";
 
-// Cada cuánto se consulta si la sede ya validó el código.
+// La validación de la sede llega al instante por el socket (`order:status:changed`). La consulta
+// periódica queda solo como respaldo por si el socket estuvo caído.
 export const HANDOFF_POLL_MS = 5_000;
 
 const minutesLeft = (expiresAt: string, now = Date.now()) =>
@@ -65,19 +67,30 @@ export function DriverHandoffCode({
   useEffect(() => {
     if (!visible || !issued) return;
     let active = true;
-    const timer = setInterval(() => {
-      setNow(Date.now());
+    let finished = false;
+    const check = () =>
       void driverOrdersService
         .getOrder(order.id)
         .then((raw) => {
-          if (active && raw?.status === doneStatus) onDoneRef.current(mapBackendOrderToDomain(raw));
+          if (active && !finished && raw?.status === doneStatus) {
+            finished = true;
+            onDoneRef.current(mapBackendOrderToDomain(raw));
+          }
         })
         .catch(() => {
           // Sin señal momentánea: se vuelve a consultar en el siguiente intervalo.
         });
+    const onStatusChanged = (payload: unknown) => {
+      if ((payload as { orderId?: unknown } | null)?.orderId === order.id) check();
+    };
+    driverSocketService.on("order:status:changed", onStatusChanged);
+    const timer = setInterval(() => {
+      setNow(Date.now());
+      check();
     }, HANDOFF_POLL_MS);
     return () => {
       active = false;
+      driverSocketService.off("order:status:changed", onStatusChanged);
       clearInterval(timer);
     };
   }, [visible, issued, order.id, doneStatus]);

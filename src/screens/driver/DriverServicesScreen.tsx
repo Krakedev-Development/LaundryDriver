@@ -26,11 +26,12 @@ export function DriverServicesScreen() {
   const loadDriverServices = useCallback(async () => {
     try {
       setSyncing(true);
+      const fetchedAt = Date.now();
       const assigned = await driverOrdersService.getAssignedOrders();
       // También quita los que ya no le pertenecen (liberados o reprogramados).
       execute((repo) => {
         repo.syncAssignedOrders(assigned);
-        repo.pruneUnassignedOrders(assigned.map((o) => o.id));
+        repo.pruneUnassignedOrders(assigned.map((o) => o.id), fetchedAt);
       });
     } catch {
       // Fallback for offline sessions

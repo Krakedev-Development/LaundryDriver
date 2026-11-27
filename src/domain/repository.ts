@@ -11,6 +11,9 @@ import { PlantOperations } from "./operations/PlantOperations";
 
 // Los pedidos que vienen del servidor tienen id UUID; los de prueba no.
 const SERVER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Cuándo se recibió por última vez cada pedido del servidor. Sirve para que una lista completa
+// pedida antes de un aviso del socket no quite un pedido recién asignado que esa lista no traía.
+const lastSyncedAt = new Map<string, number>();
 import { clone, refreshSchedule } from "./state";
 import {
   authService,
@@ -210,6 +213,7 @@ export class LaundryRepository extends PlantOperations {
       const existingIndex = this.state.orders.findIndex(
         (o) => o.id === apiOrder.id,
       );
+      lastSyncedAt.set(apiOrder.id, Date.now());
       const syncedOrder: Order = {
         ...apiOrder,
         assignedDriverId: driverId,
@@ -217,6 +221,16 @@ export class LaundryRepository extends PlantOperations {
       };
 
       if (existingIndex >= 0) {
+        // Una lectura más lenta que empezó antes del cambio (p. ej. la lista completa al abrir
+        // una pantalla) no pisa la copia más nueva que ya trajo el aviso del socket.
+        const current = this.state.orders[existingIndex];
+        if (
+          SERVER_ID.test(apiOrder.id) &&
+          typeof current.version === "number" &&
+          typeof apiOrder.version === "number" &&
+          apiOrder.version < current.version
+        )
+          continue;
         this.state.orders[existingIndex] = {
           ...this.state.orders[existingIndex],
           ...syncedOrder,
@@ -235,12 +249,14 @@ export class LaundryRepository extends PlantOperations {
   /**
    * Tras leer la lista completa del servidor, quita los pedidos del servidor que siguen abiertos
    * en el teléfono pero ya no están asignados al chofer. Los de prueba (sin UUID) no se tocan.
+   * `fetchedAt`: cuándo se pidió la lista; lo recibido después por otra vía no se quita.
    */
-  pruneUnassignedOrders(serverIds: readonly string[]): void {
+  pruneUnassignedOrders(serverIds: readonly string[], fetchedAt?: number): void {
     const keep = new Set(serverIds);
     this.state.orders = this.state.orders.filter(
       (o) =>
         keep.has(o.id) ||
+        (fetchedAt !== undefined && (lastSyncedAt.get(o.id) ?? 0) > fetchedAt) ||
         !SERVER_ID.test(o.id) ||
         terminalStatuses.includes(o.status),
     );
