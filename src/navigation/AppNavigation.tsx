@@ -1,4 +1,8 @@
-import { NavigationContainer } from "@react-navigation/native";
+import {
+  createNavigationContainerRef,
+  NavigationContainer,
+} from "@react-navigation/native";
+import { useEffect } from "react";
 import { useApp } from "../store/AppProvider";
 import { colors } from "../components/ui";
 import { useReducedMotion } from "../design-system/MotionProvider";
@@ -9,20 +13,47 @@ import { driverScreens } from "./DriverScreens";
 import { LoginScreen } from "../screens/auth/LoginScreen";
 import { PasswordScreen } from "../screens/auth/PasswordScreen";
 import { LiveLocationProvider } from "../features/driver/model/LiveLocation";
+import { driverSocketService } from "../services/realtime/driverSocketService";
+import { registerForPushNotificationsAsync, subscribeNotificationResponses } from "../services/notifications/pushRegistration";
+import type { RootRoutes } from "./routes";
+
+export const navigationRef = createNavigationContainerRef<RootRoutes>();
+
 function ForcedPasswordScreen() {
   return <PasswordScreen forced />;
 }
 export function AppNavigation() {
   const { state, ready, error, reset, retry } = useApp();
   const reduced = useReducedMotion();
-  if (!ready)
-    return <BootstrapState error={error} reset={reset} retry={retry} />;
   const session = state.session;
   const flow = !session
     ? "auth"
     : state.driver.mustChangePassword
       ? "password"
       : "driver";
+
+  useEffect(() => {
+    if (!ready || flow !== "driver") {
+      if (!session) driverSocketService.disconnect();
+      return;
+    }
+
+    void driverSocketService.connect();
+    void registerForPushNotificationsAsync();
+
+    return subscribeNotificationResponses((data) => {
+      if (!navigationRef.isReady() || !data.orderId) return;
+      if (data.type === "CHAT") {
+        navigationRef.navigate("Chat", { orderId: data.orderId });
+        return;
+      }
+      navigationRef.navigate("DriverServiceDetail", { orderId: data.orderId });
+    });
+  }, [ready, flow, session]);
+
+  if (!ready)
+    return <BootstrapState error={error} reset={reset} retry={retry} />;
+
   const initial =
     flow === "auth"
       ? "Login"
@@ -30,7 +61,10 @@ export function AppNavigation() {
         ? "DriverChangePassword"
         : "DriverTabs";
   return (
-    <NavigationContainer key={session?.id + "-" + flow}>
+    <NavigationContainer
+      ref={navigationRef}
+      key={session?.id + "-" + flow}
+    >
       {/* Con sesión de chofer se sigue y envía su ubicación real, en cualquier pantalla. */}
       <LiveLocationProvider enabled={flow === "driver"}>
         <OverlayProvider>

@@ -372,6 +372,22 @@ export const authService = {
 
   async logout(): Promise<void> {
     const { accessToken, refreshToken } = await getStoredAuthSession();
+    if (accessToken) {
+      try {
+        const pushToken = await storageGetItem("laundry.driver.expoPushToken");
+        if (pushToken) {
+          await apiClient
+            .delete(
+              `/notifications/devices?token=${encodeURIComponent(pushToken)}`,
+              { accessToken },
+            )
+            .catch(() => {});
+          await storageMultiRemove(["laundry.driver.expoPushToken"]);
+        }
+      } catch {
+        // Ignore push cleanup failures on logout
+      }
+    }
     if (accessToken && refreshToken) {
       try {
         await apiClient.post(

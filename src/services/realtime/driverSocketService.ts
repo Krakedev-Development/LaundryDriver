@@ -32,6 +32,7 @@ class DriverSocketService {
   private readonly maxReconnectAttempts = 10;
   private suppressReconnect = false;
   private readonly listeners = new Map<string, Set<SocketListener>>();
+  private readonly subscribedOrders = new Set<string>();
 
   get connected(): boolean {
     return Boolean(this.socket?.connected && this.isAuthenticated);
@@ -61,6 +62,9 @@ class DriverSocketService {
       if (this.socket !== socket) return;
       this.isAuthenticated = true;
       this.reconnectAttempts = 0;
+      for (const orderId of this.subscribedOrders) {
+        socket.emit("order:subscribe", { orderId });
+      }
       this.dispatchLocal("authenticated", undefined);
     });
 
@@ -106,6 +110,22 @@ class DriverSocketService {
     if (!this.connected || !this.socket) return false;
     this.socket.emit("driver:location:update", payload);
     return true;
+  }
+
+  subscribeOrder(orderId: string): void {
+    if (!orderId) return;
+    this.subscribedOrders.add(orderId);
+    if (this.connected && this.socket) {
+      this.socket.emit("order:subscribe", { orderId });
+    }
+  }
+
+  unsubscribeOrder(orderId: string): void {
+    if (!orderId) return;
+    this.subscribedOrders.delete(orderId);
+    if (this.connected && this.socket) {
+      this.socket.emit("order:unsubscribe", { orderId });
+    }
   }
 
   on(event: string, listener: SocketListener): void {
