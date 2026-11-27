@@ -51,6 +51,9 @@ test("driverOrdersService connects route and transitions to the backend API", as
       status: "PICKUP_ASSIGNED",
       mode: "HOME_HOME",
       facilityId: "fac-gye-central",
+      facility: { id: "fac-gye-central", name: "Planta Kennedy Norte" },
+      customerName: "Ana Cliente",
+      customerPhone: "0998877665",
       paymentStatus: "PAID",
       pricingStatus: "CALCULATED",
       total: "28.50",
@@ -64,6 +67,16 @@ test("driverOrdersService connects route and transitions to the backend API", as
           quantity: 5,
           unitPrice: "4.50",
           notes: "Planchado con almidón",
+          garment: { id: "garment-camisas", name: "Camisa Ejecutiva", icon: "shirt" },
+          service: { id: "srv-lavado", name: "Lavado y Planchado" },
+        },
+      ],
+      extras: [
+        {
+          id: "ord-ex-1",
+          extraId: "ex-1",
+          price: "1.50",
+          extra: { id: "ex-1", name: "Empaque Rígido" },
         },
       ],
       legs: [
@@ -192,6 +205,11 @@ test("driverOrdersService connects route and transitions to the backend API", as
     assert.equal(domainOrder.id, fakeOrderId);
     assert.equal(domainOrder.status, "PICKUP_ASSIGNED");
     assert.equal(domainOrder.version, 1);
+    assert.equal(domainOrder.facilityName, "Planta Kennedy Norte");
+    assert.equal(domainOrder.customerName, "Ana Cliente");
+    assert.equal(domainOrder.items[0].garmentType, "Camisa Ejecutiva");
+    assert.equal(domainOrder.items[0].serviceType, "Lavado y Planchado");
+    assert.equal(domainOrder.extras[0].name, "Empaque Rígido");
     assert.equal(
       domainOrder.fulfillmentPlan.inbound.latitude,
       KENNEDY_NORTE.latitude,

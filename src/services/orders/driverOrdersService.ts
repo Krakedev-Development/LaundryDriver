@@ -66,12 +66,15 @@ export interface BackendOrderItem {
   quantity: number;
   unitPrice: string | number;
   notes?: string | null;
+  garment?: { id: string; name: string; icon?: string | null } | null;
+  service?: { id: string; name: string } | null;
 }
 
 export interface BackendOrderExtra {
   id: string;
   extraId: string;
   price: string | number;
+  extra?: { id: string; name: string } | null;
 }
 
 export interface BackendOrderEvent {
@@ -84,6 +87,9 @@ export interface BackendOrderEvent {
 
 export interface BackendOrderDetails extends BackendOrderSummary {
   customerId?: string;
+  customerName?: string;
+  customerPhone?: string | null;
+  facility?: { id: string; name: string } | null;
   notes?: string | null;
   pricingModel?: "FIXED" | "PER_WEIGHT";
   estimatedWeightLb?: number | null;
@@ -322,9 +328,9 @@ export function mapBackendOrderToDomain(
     "items" in raw && raw.items && raw.items.length > 0
       ? raw.items.map((it) => ({
           id: it.garmentId,
-          garmentType: "Prenda de lavandería",
+          garmentType: it.garment?.name || "Prenda de lavandería",
           quantity: it.quantity,
-          serviceType: "Servicio estándar",
+          serviceType: it.service?.name || "Servicio estándar",
           unitPrice:
             typeof it.unitPrice === "string"
               ? parseFloat(it.unitPrice)
@@ -343,6 +349,17 @@ export function mapBackendOrderToDomain(
             iconName: "shirt-outline",
           },
         ];
+
+  const domainExtras =
+    "extras" in raw && raw.extras
+      ? raw.extras.map((ex) => ({
+          id: ex.extraId,
+          name: ex.extra?.name || "Extra",
+          description: "",
+          price:
+            typeof ex.price === "string" ? parseFloat(ex.price) : ex.price,
+        }))
+      : [];
 
   const timeline: TimelineEvent[] =
     "events" in raw && raw.events && raw.events.length > 0
@@ -364,17 +381,19 @@ export function mapBackendOrderToDomain(
         ];
 
   const assignedFacility =
-    facilities.find((f) => f.id === raw.facilityId)?.name || "Sede asignada";
+    ("facility" in raw && raw.facility?.name) ||
+    facilities.find((f) => f.id === raw.facilityId)?.name ||
+    "Sede asignada";
 
   return {
     id: raw.id,
     customerId: ("customerId" in raw && raw.customerId) || "",
-    customerName: "Cliente",
-    customerPhone: "",
+    customerName: ("customerName" in raw && raw.customerName) || "Cliente",
+    customerPhone: ("customerPhone" in raw && raw.customerPhone) || "",
     status: (raw.status as OrderStatus) ?? "PICKUP_ASSIGNED",
     priority: false,
     items: domainItems,
-    extras: [],
+    extras: domainExtras,
     pricing,
     pickup,
     delivery,
