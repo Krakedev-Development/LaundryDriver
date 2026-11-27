@@ -75,6 +75,11 @@ export interface Order {
   adjustments: Adjustment[];
   canChangeOutboundMethod: boolean;
   version?: number;
+  /**
+   * Armado solo con el resumen de la lista porque no se pudo leer el detalle (sin señal o el
+   * servidor limitó las consultas): no trae dirección, franja, prendas ni cliente.
+   */
+  detailMissing?: boolean;
 }
 export const money = (n: number) => `$${n.toFixed(2)}`;
 export const round = (n: number) =>

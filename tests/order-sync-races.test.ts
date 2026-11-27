@@ -40,3 +40,32 @@ test("una lista pedida antes de una asignación nueva no quita ese pedido", () =
   h.run((repo) => repo.pruneUnassignedOrders([ID_A], Date.now() + 1_000));
   assert.ok(!h.state.orders.some((o) => o.id === ID_B));
 });
+
+test("un pedido sin detalle (solo resumen) no borra la dirección ni la franja ya conocidas", () => {
+  const h = driverHarness();
+  h.signIn();
+  const base = h.state.orders[0];
+  const full = serverOrder(base, ID_A, 3, "DELIVERY_ASSIGNED");
+  full.delivery = { ...full.delivery, addressFull: "Av. 9 de Octubre 100", timeSlot: "10:00 - 12:00" };
+  full.customerName = "Ana Torres";
+  h.run((repo) => repo.syncAssignedOrders([full]));
+
+  const summaryOnly: Order = {
+    ...serverOrder(base, ID_A, 4, "OUT_FOR_DELIVERY"),
+    customerName: "Cliente",
+    delivery: { ...full.delivery, addressFull: "Dirección no disponible", timeSlot: "Sin horario" },
+    detailMissing: true,
+  };
+  h.run((repo) => repo.syncAssignedOrders([summaryOnly]));
+  let order = h.state.orders.find((o) => o.id === ID_A)!;
+  assert.equal(order.status, "OUT_FOR_DELIVERY");
+  assert.equal(order.version, 4);
+  assert.equal(order.delivery.addressFull, "Av. 9 de Octubre 100");
+  assert.equal(order.delivery.timeSlot, "10:00 - 12:00");
+  assert.equal(order.customerName, "Ana Torres");
+
+  // Cuando llega el detalle completo se quita la marca de incompleto.
+  h.run((repo) => repo.syncAssignedOrders([{ ...full, version: 5 }]));
+  order = h.state.orders.find((o) => o.id === ID_A)!;
+  assert.equal(order.detailMissing, undefined);
+});

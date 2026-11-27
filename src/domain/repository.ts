@@ -218,7 +218,20 @@ export class LaundryRepository extends PlantOperations {
         ...apiOrder,
         assignedDriverId: driverId,
         assignedDriverName: driverName,
+        // Explícito: un detalle completo borra la marca de incompleto de la copia anterior.
+        detailMissing: apiOrder.detailMissing || undefined,
       };
+
+      if (existingIndex >= 0 && apiOrder.detailMissing) {
+        // Solo el resumen (falló el detalle): se toman estado y versión si son más nuevos, sin
+        // perder la dirección, la franja, el cliente ni las prendas que ya se conocían.
+        const current = this.state.orders[existingIndex];
+        if ((apiOrder.version ?? 0) >= (current.version ?? 0)) {
+          current.status = apiOrder.status;
+          current.version = apiOrder.version;
+        }
+        continue;
+      }
 
       if (existingIndex >= 0) {
         // Una lectura más lenta que empezó antes del cambio (p. ej. la lista completa al abrir

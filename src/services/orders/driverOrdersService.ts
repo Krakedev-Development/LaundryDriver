@@ -84,6 +84,8 @@ export interface BackendOrderEvent {
 
 export interface BackendOrderDetails extends BackendOrderSummary {
   customerId?: string;
+  customerName?: string | null;
+  customerPhone?: string | null;
   notes?: string | null;
   pricingModel?: "FIXED" | "PER_WEIGHT";
   estimatedWeightLb?: number | null;
@@ -369,8 +371,8 @@ export function mapBackendOrderToDomain(
   return {
     id: raw.id,
     customerId: ("customerId" in raw && raw.customerId) || "",
-    customerName: "Cliente",
-    customerPhone: "",
+    customerName: ("customerName" in raw && raw.customerName) || "Cliente",
+    customerPhone: ("customerPhone" in raw && raw.customerPhone) || "",
     status: (raw.status as OrderStatus) ?? "PICKUP_ASSIGNED",
     priority: false,
     items: domainItems,
@@ -426,14 +428,19 @@ export const driverOrdersService = {
       return [];
     }
 
+    // Si falla el detalle se reintenta una vez; si vuelve a fallar se marca como incompleto para
+    // que no reemplace la dirección, la franja y las prendas que el teléfono ya tenía.
     const detailedOrders = await Promise.all(
       summaries.map(async (summary) => {
-        try {
-          const detail = await this.getOrder(summary.id, token);
-          return mapBackendOrderToDomain(detail);
-        } catch {
-          return mapBackendOrderToDomain(summary);
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+          try {
+            const detail = await this.getOrder(summary.id, token);
+            return mapBackendOrderToDomain(detail);
+          } catch {
+            if (attempt === 0) await new Promise((r) => setTimeout(r, 400));
+          }
         }
+        return { ...mapBackendOrderToDomain(summary), detailMissing: true };
       }),
     );
 

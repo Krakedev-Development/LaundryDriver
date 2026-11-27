@@ -9,10 +9,32 @@ import { refreshOrderFromServer, type OrderStatusChangedEvent } from "./orderSta
 // el cliente lo canceló o reprogramó, la sede lo liberó o lo reasignó. La app vuelve a leer ese
 // pedido y actualiza la lista sin que el chofer tenga que recargar.
 
+const MISSING_DETAIL_RETRY_MS = 3_000;
+
 export function useOrderStatusSync(enabled: boolean): void {
-  const { execute } = useApp();
+  const { state, execute } = useApp();
   const executeRef = useRef(execute);
   executeRef.current = execute;
+
+  // Pedidos que quedaron solo con el resumen (falló su detalle): se vuelve a pedir el detalle a
+  // los pocos segundos, para no mostrar "Dirección no disponible" o "Sin horario".
+  const missingKey = state.orders
+    .filter((o) => o.detailMissing)
+    .map((o) => o.id)
+    .join(",");
+  useEffect(() => {
+    if (!enabled || !missingKey) return;
+    const timer = setTimeout(() => {
+      for (const id of missingKey.split(",")) {
+        void refreshOrderFromServer(id, {
+          getOrder: (orderId) => driverOrdersService.getOrder(orderId),
+          onUpdate: (order) => executeRef.current((repo) => repo.syncAssignedOrders([order])),
+          onRemove: (orderId) => executeRef.current((repo) => repo.removeOrder(orderId)),
+        });
+      }
+    }, MISSING_DETAIL_RETRY_MS);
+    return () => clearTimeout(timer);
+  }, [enabled, missingKey]);
 
   useEffect(() => {
     if (!enabled) return;
