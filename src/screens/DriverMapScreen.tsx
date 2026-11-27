@@ -20,7 +20,7 @@ import {
 } from "../components/routeMapShared";
 import { useApp } from "../store/AppProvider";
 import { visibleOrders } from "../domain/repository";
-import { pickupStatuses, type Order } from "../domain/models";
+import { orderLabel, pickupStatuses, type Order } from "../domain/models";
 import { facilities } from "../domain/catalog";
 import type { ScreenProps } from "../navigation/routes";
 import { useLaundryNavigation } from "../navigation/useLaundryNavigation";
@@ -86,7 +86,7 @@ export function DriverMapScreen({ route }: ScreenProps<"DriverMap">) {
       <Card style={styles.telemetryCard}>
         <View style={styles.headerRow}>
           <View style={styles.titleGroup}>
-            <Title>{o.id}</Title>
+            <Title>{orderLabel(o)}</Title>
             <View
               style={[
                 styles.stopTypeBadge,

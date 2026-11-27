@@ -43,6 +43,8 @@ export interface Order {
   legacyInbound?: Leg;
   pickupNeedsScheduling?: boolean;
   id: string;
+  /** Número correlativo de la solicitud en el servidor (se muestra como SOL-0042). */
+  number?: number;
   customerId: string;
   customerName: string;
   customerPhone: string;
@@ -81,6 +83,16 @@ export interface Order {
    */
   detailMissing?: boolean;
 }
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Código visible de la solicitud, el mismo que usa la web (SOL-0042). El id interno no se muestra. */
+export const orderLabel = (o: Pick<Order, "id" | "number">) =>
+  typeof o.number === "number"
+    ? `SOL-${String(o.number).padStart(4, "0")}`
+    : UUID.test(o.id)
+      ? "Solicitud"
+      : o.id;
+
 export const money = (n: number) => `$${n.toFixed(2)}`;
 export const round = (n: number) =>
   Math.round((n + Number.EPSILON) * 100) / 100;

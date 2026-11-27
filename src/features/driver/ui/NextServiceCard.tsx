@@ -10,6 +10,7 @@ import {
 } from "../../../components/ui";
 import {
   garmentCount,
+  orderLabel,
   pickupStatuses,
   type Order,
 } from "../../../domain/models";
@@ -64,7 +65,7 @@ export function NextServiceCard({ order: next }: { order: Order }) {
       </View>
 
       <View style={routeStyles.nextHeader}>
-        <Title style={routeStyles.id}>{next.id}</Title>
+        <Title style={routeStyles.id}>{orderLabel(next)}</Title>
         <StatusChip status={next.status} />
       </View>
 

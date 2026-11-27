@@ -9,6 +9,7 @@ import {
   garmentCount,
   modeLabels,
   money,
+  orderLabel,
   pickupStatuses,
   type Order,
 } from "../domain/models";
@@ -43,7 +44,7 @@ export function OrderCard({
     >
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={"Ver detalle de " + order.id}
+        accessibilityLabel={"Ver detalle de " + orderLabel(order)}
         onPress={() => {
           tactile("selection");
           onDetail();
@@ -66,7 +67,7 @@ export function OrderCard({
             <Title
               style={orders ? ordersStyles.id : home && homeOrderStyles.title}
             >
-              {order.id}
+              {orderLabel(order)}
             </Title>
             {orders && (
               <View

@@ -370,6 +370,7 @@ export function mapBackendOrderToDomain(
 
   return {
     id: raw.id,
+    number: typeof raw.number === "number" ? raw.number : undefined,
     customerId: ("customerId" in raw && raw.customerId) || "",
     customerName: ("customerName" in raw && raw.customerName) || "Cliente",
     customerPhone: ("customerPhone" in raw && raw.customerPhone) || "",

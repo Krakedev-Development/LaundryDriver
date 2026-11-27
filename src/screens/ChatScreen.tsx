@@ -6,6 +6,7 @@ import { Page } from "../components/Page";
 import { Body, Button, Empty, Field, Title, useAction } from "../components/ui";
 import { useApp } from "../store/AppProvider";
 import { visibleOrders } from "../domain/repository";
+import { orderLabel } from "../domain/models";
 import type { ScreenProps } from "../navigation/routes";
 export function ChatScreen({ route }: ScreenProps<"Chat">) {
   const { state, execute } = useApp();
@@ -26,7 +27,7 @@ export function ChatScreen({ route }: ScreenProps<"Chat">) {
     <Page scroll={false}>
       <View>
         <Title>{recipient ?? "Chat de solicitud"}</Title>
-        <Body muted>{o.id} · Mensajes locales</Body>
+        <Body muted>{orderLabel(o)} · Mensajes locales</Body>
       </View>
       <FlatList
         ref={list}

@@ -10,6 +10,7 @@ import {
 } from "../../components/ui";
 import { useApp } from "../../store/AppProvider";
 import { visibleOrders } from "../../domain/repository";
+import { orderLabel } from "../../domain/models";
 import type { ScreenProps } from "../../navigation/routes";
 import { driverServiceStyles } from "../../components/DriverServicePresentation";
 import { DeliveryRecipientFields } from "../../features/driver/ui/DeliveryRecipientFields";
@@ -47,7 +48,7 @@ export function DriverDeliveryConfirmScreen({
       }
     >
       <View style={styles.topHeader}>
-        <Badge>{order.id}</Badge>
+        <Badge>{orderLabel(order)}</Badge>
         <View style={styles.stepPill}>
           <Icon name="checkmark-done-outline" size={14} color="#166534" />
           <Text style={styles.stepPillText}>ENTREGA VERIFICADA</Text>

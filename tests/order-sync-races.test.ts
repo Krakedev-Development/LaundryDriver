@@ -69,3 +69,11 @@ test("un pedido sin detalle (solo resumen) no borra la dirección ni la franja y
   order = h.state.orders.find((o) => o.id === ID_A)!;
   assert.equal(order.detailMissing, undefined);
 });
+
+test("la solicitud se muestra con el número SOL de la web, nunca con el id interno", async () => {
+  const { orderLabel } = await import("../src/domain/models");
+  assert.equal(orderLabel({ id: ID_A, number: 42 }), "SOL-0042");
+  assert.equal(orderLabel({ id: ID_A, number: 12345 }), "SOL-12345");
+  assert.equal(orderLabel({ id: ID_A }), "Solicitud");
+  assert.equal(orderLabel({ id: "SOL-4587" }), "SOL-4587");
+});

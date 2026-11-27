@@ -12,6 +12,7 @@ import {
 } from "../../components/ui";
 import { useApp } from "../../store/AppProvider";
 import { visibleOrders } from "../../domain/repository";
+import { orderLabel } from "../../domain/models";
 import type { ScreenProps } from "../../navigation/routes";
 import { driverServiceStyles } from "../../components/DriverServicePresentation";
 import { PickupGarmentFields } from "../../features/driver/ui/PickupGarmentFields";
@@ -80,7 +81,7 @@ export function DriverPickupConfirmScreen({
       }
     >
       <View style={styles.topHeader}>
-        <Badge>{order.id}</Badge>
+        <Badge>{orderLabel(order)}</Badge>
         <View
           style={[
             styles.stepPill,
